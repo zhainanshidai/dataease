@@ -353,7 +353,10 @@ export class TablePivot extends S2ChartView<PivotSheet> {
     if (!isAlphaColor(tableHeaderBgColor)) {
       tableHeaderBgColor = hexColorToRGBA(tableHeaderBgColor, basicStyle.alpha)
     }
-    const tableBorderColor = hexColorToRGBA(basicStyle.tableBorderColor, basicStyle.alpha)
+    let tableBorderColor = basicStyle.tableBorderColor
+    if (!isAlphaColor(tableBorderColor)) {
+      tableBorderColor = hexColorToRGBA(tableBorderColor, basicStyle.alpha)
+    }
     const tableHeaderFontColor = hexColorToRGBA(tableHeader.tableHeaderFontColor, basicStyle.alpha)
     const fontStyle = tableHeader.isItalic ? 'italic' : 'normal'
     const fontWeight = tableHeader.isBolder === false ? 'normal' : 'bold'
