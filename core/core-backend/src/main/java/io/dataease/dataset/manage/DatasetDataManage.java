@@ -50,6 +50,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -130,6 +131,15 @@ public class DatasetDataManage {
             }
 
             tableFields = provider.fetchTableField(datasourceRequest);
+        } else if (StringUtils.equalsIgnoreCase(type, DatasetTableType.Es)) {
+            CoreDatasource coreDatasource = coreDatasourceMapper.selectById(datasetTableDTO.getDatasourceId());
+            Provider provider = ProviderFactory.getProvider(type);
+            DatasourceRequest datasourceRequest = new DatasourceRequest();
+            DatasourceSchemaDTO datasourceSchemaDTO = new DatasourceSchemaDTO();
+            BeanUtils.copyBean(datasourceSchemaDTO, coreDatasource);
+            datasourceRequest.setDatasource(datasourceSchemaDTO);
+            datasourceRequest.setTable(datasetTableDTO.getTableName());
+            tableFields = provider.fetchTableField(datasourceRequest);
         } else {
             // excel,api
             CoreDatasource coreDatasource = engineManage.getDeEngine();
@@ -185,9 +195,7 @@ public class DatasetDataManage {
                 DEException.throwException(Translator.get("i18n_no_column_permission"));
             }
         }
-
         buildFieldName(sqlMap, fields);
-
         Map<Long, DatasourceSchemaDTO> dsMap = (Map<Long, DatasourceSchemaDTO>) sqlMap.get("dsMap");
         DatasourceUtils.checkDsStatus(dsMap);
         List<String> dsList = new ArrayList<>();
@@ -202,13 +210,11 @@ public class DatasetDataManage {
             }
             sql = Utils.replaceSchemaAlias(sql, dsMap);
         }
-
         List<DataSetRowPermissionsTreeDTO> rowPermissionsTree = new ArrayList<>();
         TokenUserBO user = AuthUtils.getUser();
         if (user != null && checkPermission) {
             rowPermissionsTree = permissionManage.getRowPermissionsTree(datasetGroupInfoDTO.getId(), user.getUserId());
         }
-
         Provider provider;
         if (crossDs) {
             provider = ProviderFactory.getDefaultProvider();
@@ -236,7 +242,6 @@ public class DatasetDataManage {
         DatasourceRequest datasourceRequest = new DatasourceRequest();
         datasourceRequest.setQuery(querySQL);
         datasourceRequest.setDsList(dsMap);
-
         Map<String, Object> data = provider.fetchResultField(datasourceRequest);
 
         Map<String, Object> map = new LinkedHashMap<>();
@@ -448,11 +453,17 @@ public class DatasetDataManage {
                 LinkedHashMap<String, Object> obj = new LinkedHashMap<>();
                 if (row.length > 0) {
                     for (int j = 0; j < fields.size(); j++) {
+                        String res = row[j];
+                        // 如果字段类型是数值类型的小数，则去除科学计数
+                        if (fields.get(j).getDeType() == 3 && StringUtils.containsIgnoreCase(res, "E")) {
+                            BigDecimal bigDecimal = new BigDecimal(res);
+                            res = String.format("%.8f", bigDecimal);
+                        }
                         if (desensitizationList.keySet().contains(fields.get(j).getDataeaseName())) {
-                            obj.put(fields.get(j).getDataeaseName(), ChartDataBuild.desensitizationValue(desensitizationList.get(fields.get(j).getDataeaseName()), String.valueOf(row[j])));
+                            obj.put(fields.get(j).getDataeaseName(), ChartDataBuild.desensitizationValue(desensitizationList.get(fields.get(j).getDataeaseName()), String.valueOf(res)));
                         } else {
                             obj.put(ObjectUtils.isNotEmpty(fields.get(j).getDataeaseName()) ?
-                                    fields.get(j).getDataeaseName() : fields.get(j).getOriginName(), row[j]);
+                                    fields.get(j).getDataeaseName() : fields.get(j).getOriginName(), res);
                         }
                     }
                 }
@@ -561,14 +572,20 @@ public class DatasetDataManage {
                 provider = ProviderFactory.getProvider(dsList.getFirst());
             }
 
+            String dsType = null;
+            if (dsMap != null && dsMap.entrySet().iterator().hasNext()) {
+                Map.Entry<Long, DatasourceSchemaDTO> next = dsMap.entrySet().iterator().next();
+                dsType = next.getValue().getType();
+            }
+
             Field2SQLObj.field2sqlObj(sqlMeta, fields, allFields, crossDs, dsMap, Utils.getParams(allFields), null, pluginManage);
             WhereTree2Str.transFilterTrees(sqlMeta, rowPermissionsTree, allFields, crossDs, dsMap, Utils.getParams(allFields), null, pluginManage);
             Order2SQLObj.getOrders(sqlMeta, datasetGroupInfoDTO.getSortFields(), allFields, crossDs, dsMap, Utils.getParams(allFields), null, pluginManage);
             String querySQL;
             if (multFieldValuesRequest.getResultMode() == 0) {
-                querySQL = SQLProvider.createQuerySQLWithLimit(sqlMeta, false, needOrder, true, 0, 1000);
+                querySQL = SQLProvider.createQuerySQLWithLimit(sqlMeta, false, needOrder, !StringUtils.equalsIgnoreCase(dsType, "es"), 0, 1000);
             } else {
-                querySQL = SQLProvider.createQuerySQL(sqlMeta, false, needOrder, true);
+                querySQL = SQLProvider.createQuerySQL(sqlMeta, false, needOrder, !StringUtils.equalsIgnoreCase(dsType, "es"));
             }
             querySQL = provider.rebuildSQL(querySQL, sqlMeta, crossDs, dsMap);
             logger.debug("calcite data enum sql: " + querySQL);
@@ -808,15 +825,21 @@ public class DatasetDataManage {
             provider = ProviderFactory.getProvider(dsList.getFirst());
         }
 
+        String dsType = null;
+        if (dsMap != null && dsMap.entrySet().iterator().hasNext()) {
+            Map.Entry<Long, DatasourceSchemaDTO> next = dsMap.entrySet().iterator().next();
+            dsType = next.getValue().getType();
+        }
+
         Field2SQLObj.field2sqlObj(sqlMeta, fields, allFields, crossDs, dsMap, Utils.getParams(allFields), null, pluginManage);
         ExtWhere2Str.extWhere2sqlOjb(sqlMeta, extFilterList, allFields, crossDs, dsMap, Utils.getParams(allFields), null, pluginManage);
         WhereTree2Str.transFilterTrees(sqlMeta, rowPermissionsTree, allFields, crossDs, dsMap, Utils.getParams(allFields), null, pluginManage);
         Order2SQLObj.getOrders(sqlMeta, datasetGroupInfoDTO.getSortFields(), allFields, crossDs, dsMap, Utils.getParams(allFields), null, pluginManage);
         String querySQL;
         if (request.getResultMode() == 0) {
-            querySQL = SQLProvider.createQuerySQLWithLimit(sqlMeta, false, needOrder, sortDistinct && ids.size() == 1, 0, 1000);
+            querySQL = SQLProvider.createQuerySQLWithLimit(sqlMeta, false, needOrder, sortDistinct && ids.size() == 1 && !StringUtils.equalsIgnoreCase(dsType, "es"), 0, 1000);
         } else {
-            querySQL = SQLProvider.createQuerySQL(sqlMeta, false, needOrder, sortDistinct && ids.size() == 1);
+            querySQL = SQLProvider.createQuerySQL(sqlMeta, false, needOrder, sortDistinct && ids.size() == 1 && !StringUtils.equalsIgnoreCase(dsType, "es"));
         }
         querySQL = provider.rebuildSQL(querySQL, sqlMeta, crossDs, dsMap);
         logger.debug("calcite data enum sql: " + querySQL);

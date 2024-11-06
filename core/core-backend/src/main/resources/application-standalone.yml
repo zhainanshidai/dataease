@@ -5,7 +5,7 @@ spring:
     username: root
     password: Password123@mysql
   messages:
-    basename: i18n/lic,i18n/core,i18n/permissions,i18n/xpack
+    basename: i18n/lic,i18n/core,i18n/permissions,i18n/xpack,i18n/sync
   flyway:
     enabled: true
     table: de_standalone_version

@@ -209,7 +209,7 @@ const next = () => {
     currentDsType.value === 'API' &&
     activeStep.value !== 2
   ) {
-    ElMessage.error('数据表不能为空')
+    ElMessage.error(t('data_source.cannot_be_empty_table'))
     return
   }
 
@@ -283,7 +283,7 @@ emitter.on('showFinishPage', handleShowFinishPage)
 
 const prev = () => {
   if ((currentDsType.value === 'API' && activeApiStep.value === 1) || activeStep.value === 1) {
-    ElMessageBox.confirm('填写的信息将会清空，确定返回上一步吗？', {
+    ElMessageBox.confirm(t('data_source.the_previous_step'), {
       confirmButtonType: 'primary',
       type: 'warning',
       autofocus: false,
@@ -336,7 +336,7 @@ const validateDS = () => {
   }
   if (currentDsType.value === 'API') {
     if (form.apiConfiguration.length === 0) {
-      ElMessage.error('需要添加数据表')
+      ElMessage.error(t('data_source.add_data_table'))
       return
     }
     let apiItems = []
@@ -383,7 +383,7 @@ const doValidateDs = request => {
         if (error === 0) {
           ElMessage.success(t('datasource.validate_success'))
         } else {
-          ElMessage.error('校验失败')
+          ElMessage.error(t('data_source.verification_failed'))
         }
       } else {
         ElMessage.success(t('datasource.validate_success'))
@@ -505,7 +505,7 @@ const doSaveDs = request => {
               .then(res => {
                 if (res !== undefined) {
                   handleShowFinishPage({ id: res.id, name: res.name })
-                  ElMessage.success('保存数据源成功')
+                  ElMessage.success(t('data_source.source_saved_successfully'))
                 }
               })
               .finally(() => {
@@ -522,7 +522,7 @@ const doSaveDs = request => {
           .then(res => {
             if (res !== undefined) {
               handleShowFinishPage({ id: res.id, name: res.name })
-              ElMessage.success('保存数据源成功')
+              ElMessage.success(t('data_source.source_saved_successfully'))
             }
           })
           .finally(() => {
@@ -634,9 +634,13 @@ const init = (nodeInfo: Form | Param, id?: string, res?: object) => {
 const drawTitle = computed(() => {
   const { id, editType, creator } = form2
   if (creator && id && currentDsType.value == 'Excel') {
-    return editType === 1 ? '追加数据' : '替换数据'
+    return editType === 1 ? t('data_source.append_data') : t('data_source.replace_data')
   }
-  return editDs.value ? (!form.id ? '复制数据源' : t('datasource.modify')) : '创建数据源'
+  return editDs.value
+    ? !form.id
+      ? t('data_source.copy_data_source')
+      : t('datasource.modify')
+    : t('data_source.create_data_source')
 })
 
 const beforeClose = () => {
@@ -645,7 +649,7 @@ const beforeClose = () => {
     wsCache.set('ds-new-success', false)
   }
   if (!showFinishPage.value && ((!editDs.value && activeStep.value !== 0) || isUpdate)) {
-    ElMessageBox.confirm('当前的更改尚未保存,确定退出吗?', {
+    ElMessageBox.confirm(t('data_source.want_to_exit'), {
       confirmButtonText: t('dataset.confirm'),
       cancelButtonText: t('common.cancel'),
       showCancelButton: true,
@@ -696,7 +700,7 @@ defineExpose({
                 <span class="icon">
                   {{ activeStep <= 1 ? '2' : '' }}
                 </span>
-                <span class="title">配置信息</span>
+                <span class="title">{{ t('data_source.configuration_information') }}</span>
               </div>
             </template>
           </el-step>
@@ -706,7 +710,7 @@ defineExpose({
         <Icon name="icon_close_outlined"><icon_close_outlined class="svg-icon" /></Icon>
       </el-icon>
     </template>
-    <div class="datasource">
+    <div class="datasource" v-loading="dsLoading">
       <div class="ds-type-select" v-if="!editDs">
         <div class="title">
           <el-input
@@ -730,7 +734,7 @@ defineExpose({
             @click="handleNodeClick({ type: 'latestUse', name: 'latestUse', id: 'latestUse' })"
             class="list-item_primary"
           >
-            最近创建
+            {{ t('data_source.recently_created') }}
           </p>
           <el-divider />
           <p
@@ -738,7 +742,7 @@ defineExpose({
             @click="handleNodeClick({ type: 'all', name: 'all', id: 'all' })"
             class="list-item_primary"
           >
-            全部
+            {{ t('data_source.all') }}
           </p>
           <div
             :key="ele.name"
@@ -774,7 +778,7 @@ defineExpose({
           </template>
         </el-tree>
       </div>
-      <div class="ds-editor" :class="editDs && 'edit-ds'" v-loading="dsLoading">
+      <div class="ds-editor" :class="editDs && 'edit-ds'">
         <div v-show="activeStep !== 0 && !editDs" class="ds-type-title">
           {{ typeTitle }}
         </div>
@@ -812,7 +816,7 @@ defineExpose({
           </template>
         </div>
       </div>
-      <div class="editor-footer" v-loading="dsLoading">
+      <div class="editor-footer">
         <el-button secondary @click="beforeClose"> {{ t('common.cancel') }}</el-button>
         <el-button
           v-show="!(activeStep === 0 || (editDs && activeApiStep <= 1))"

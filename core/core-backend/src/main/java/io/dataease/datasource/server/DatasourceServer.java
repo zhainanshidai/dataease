@@ -126,7 +126,7 @@ public class DatasourceServer implements DatasourceApi {
     }
 
     public boolean checkRepeat(@RequestBody BusiDsRequest dataSourceDTO) {
-        if (Arrays.asList("API", "Excel", "folder").contains(dataSourceDTO.getType())) {
+        if (Arrays.asList("API", "Excel", "folder", "es").contains(dataSourceDTO.getType())) {
             return false;
         }
         BusiNodeRequest request = new BusiNodeRequest();
@@ -267,7 +267,11 @@ public class DatasourceServer implements DatasourceApi {
                 try {
                     datasourceSyncManage.createEngineTable(datasourceRequest.getTable(), tableFields);
                 } catch (Exception e) {
-                    DEException.throwException("Failed to create table " + datasourceRequest.getTable() + ", " + e.getMessage());
+                    if (e.getMessage().toLowerCase().contains("Row size too large".toLowerCase())) {
+                        DEException.throwException("文本内容超出最大支持范围： " + datasourceRequest.getTable() + ", " + e.getMessage());
+                    } else {
+                        DEException.throwException("Failed to create table " + datasourceRequest.getTable() + ", " + e.getMessage());
+                    }
                 }
             }
             commonThreadPool.addTask(() -> {
@@ -404,7 +408,7 @@ public class DatasourceServer implements DatasourceApi {
             List<String> tables = ExcelUtils.getTables(datasourceRequest).stream().map(DatasetTableDTO::getTableName).collect(Collectors.toList());
             if (dataSourceDTO.getEditType() == 0) {
                 toCreateTables = tables;
-                toDeleteTables = sourceTables;
+                toDeleteTables = sourceTables.stream().filter(s -> tables.contains(s)).collect(Collectors.toList());
                 for (String deleteTable : toDeleteTables) {
                     try {
                         datasourceSyncManage.dropEngineTable(deleteTable);
@@ -422,6 +426,7 @@ public class DatasourceServer implements DatasourceApi {
                 }
                 datasourceSyncManage.extractExcelData(requestDatasource, "all_scope");
                 dataSourceManage.checkName(dataSourceDTO);
+                ExcelUtils.mergeSheets(requestDatasource, sourceData);
                 dataSourceManage.innerEdit(requestDatasource);
             } else {
                 datasourceSyncManage.extractExcelData(requestDatasource, "add_scope");
@@ -486,6 +491,15 @@ public class DatasourceServer implements DatasourceApi {
     @Override
     public DatasourceDTO innerGet(Long datasourceId) throws DEException {
         return getDatasourceDTOById(datasourceId, false);
+    }
+
+    @Override
+    public String getName(Long datasourceId) throws DEException {
+        CoreDatasource datasource = datasourceMapper.selectById(datasourceId);
+        if (datasource == null) {
+            DEException.throwException("不存在的数据源！");
+        }
+        return datasource.getName();
     }
 
     @Override
@@ -726,11 +740,15 @@ public class DatasourceServer implements DatasourceApi {
         }
     }
 
+    private static final Integer replace = 0;
+    private static final Integer append = 1;
+
     public ExcelFileData excelUpload(@RequestParam("file") MultipartFile file, @RequestParam("id") long datasourceId, @RequestParam("editType") Integer editType) throws DEException {
+        CoreDatasource coreDatasource = datasourceMapper.selectById(datasourceId);
+
         ExcelUtils excelUtils = new ExcelUtils();
         ExcelFileData excelFileData = excelUtils.excelSaveAndParse(file);
-        if (editType == 1 || editType == 0) { //按照excel sheet 名称匹配
-            CoreDatasource coreDatasource = datasourceMapper.selectById(datasourceId);
+        if (Objects.equals(editType, append)) { //按照excel sheet 名称匹配，替换：0；追加：1
             if (coreDatasource != null) {
                 DatasourceRequest datasourceRequest = new DatasourceRequest();
                 datasourceRequest.setDatasource(transDTO(coreDatasource));
@@ -748,7 +766,6 @@ public class DatasourceServer implements DatasourceApi {
                             oldTableFields.sort((o1, o2) -> {
                                 return o1.getName().compareTo(o2.getName());
                             });
-
                             if (isEqual(newTableFields, oldTableFields)) {
                                 sheet.setDeTableName(datasetTableDTO.getTableName());
                                 excelSheetDataList.add(sheet);
@@ -761,8 +778,21 @@ public class DatasourceServer implements DatasourceApi {
                 }
                 excelFileData.setSheets(excelSheetDataList);
             }
-        }
+        } else {
+            if (coreDatasource != null) {
+                DatasourceRequest datasourceRequest = new DatasourceRequest();
+                datasourceRequest.setDatasource(transDTO(coreDatasource));
+                List<DatasetTableDTO> datasetTableDTOS = ExcelUtils.getTables(datasourceRequest);
+                for (ExcelSheetData sheet : excelFileData.getSheets()) {
+                    for (DatasetTableDTO datasetTableDTO : datasetTableDTOS) {
+                        if (excelDataTableName(datasetTableDTO.getTableName()).equals(sheet.getTableName()) || isCsv(file.getOriginalFilename())) {
+                            sheet.setDeTableName(datasetTableDTO.getTableName());
+                        }
+                    }
+                }
 
+            }
+        }
         for (ExcelSheetData sheet : excelFileData.getSheets()) {
             for (int i = 0; i < sheet.getFields().size() - 1; i++) {
                 for (int j = i + 1; j < sheet.getFields().size(); j++) {
@@ -1146,8 +1176,11 @@ public class DatasourceServer implements DatasourceApi {
             if (!Arrays.asList("API", "Excel", "folder").contains(coreDatasource.getType())) {
                 calciteProvider.updateDsPoolAfterCheckStatus(datasourceDTO);
             }
+        } catch (DEException e) {
+            datasourceDTO.setStatus("Error");
+            DEException.throwException(e.getMessage());
         } catch (Exception e) {
-            coreDatasource.setStatus("Error");
+            datasourceDTO.setStatus("Error");
             DEException.throwException(e.getMessage());
         } finally {
             coreDatasource.setStatus(datasourceDTO.getStatus());
