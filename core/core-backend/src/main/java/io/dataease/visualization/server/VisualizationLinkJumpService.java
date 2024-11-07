@@ -137,6 +137,7 @@ public class VisualizationLinkJumpService implements VisualizationLinkJumpApi {
         });
     }
 
+    @DeLinkPermit("#p0.targetDvId")
     @Override
     public VisualizationLinkJumpBaseResponse queryTargetVisualizationJumpInfo(VisualizationLinkJumpBaseRequest request) {
         List<VisualizationLinkJumpDTO> result = extVisualizationLinkJumpMapper.getTargetVisualizationJumpInfo(request);

@@ -19,7 +19,7 @@ import java.util.List;
 @Component
 public class LinkInterceptor implements HandlerInterceptor {
 
-    private final static String whiteListText = "/user/ipInfo, /apisix/check, /datasetData/enumValueObj";
+    private final static String whiteListText = "/user/ipInfo, /apisix/check, /datasetData/enumValueObj, /dekey, /share/validate";
 
 
     @Override
@@ -40,7 +40,7 @@ public class LinkInterceptor implements HandlerInterceptor {
                 if (StringUtils.startsWith(requestURI, AuthConstant.DE_API_PREFIX)) {
                     requestURI = requestURI.replaceFirst(AuthConstant.DE_API_PREFIX, "");
                 }
-                boolean valid = whiteList.contains(requestURI);
+                boolean valid = whiteList.contains(requestURI) || WhitelistUtils.match(requestURI);
                 if (!valid) {
                     DEException.throwException("分享链接Token不支持访问当前url[" + requestURI + "]");
                 }
