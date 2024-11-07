@@ -135,7 +135,7 @@ export class BubbleMap extends L7PlotChartView<ChoroplethOptions, Choropleth> {
       })
       dotLayer.once('loaded', () => {
         chart.container = container
-        configCarouselTooltip(chart, view, chart.data?.data || [], null)
+        configCarouselTooltip(chart, view, chart.data?.data || [], null, areaId)
       })
     })
     return view
