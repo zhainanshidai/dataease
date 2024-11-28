@@ -36,8 +36,7 @@ public class PanelLinkService {
     private static final String USERPARAM = "&user=";
     private static final String SHORT_URL_PREFIX = "/link/";
 
-    @Value("${server.servlet.context-path:#{null}}")
-    private String contextPath;
+
 
     @Resource
     private PanelLinkMapper mapper;
@@ -281,6 +280,7 @@ public class PanelLinkService {
         List<PanelLinkMapping> mappings = panelLinkMappingMapper.selectByExample(example);
         PanelLinkMapping mapping = mappings.get(0);
         String uuid = mapping.getUuid();
+        String contextPath = ServletUtils.getContextPath();
         return (StringUtils.isNotBlank(contextPath) ? contextPath : "") + SHORT_URL_PREFIX + (StringUtils.isBlank(uuid) ? mapping.getId() : uuid);
     }
 
