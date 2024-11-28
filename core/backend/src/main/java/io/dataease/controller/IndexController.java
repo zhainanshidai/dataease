@@ -30,8 +30,6 @@ public class IndexController {
     @Resource
     private PanelLinkService panelLinkService;
 
-    @Value("${server.servlet.context-path:#{null}}")
-    private String contextPath;
 
     @GetMapping(value = "/")
     public String index() {
@@ -56,6 +54,7 @@ public class IndexController {
         } else {
             url = panelLinkService.getUrlByUuid(index);
         }
+        String contextPath = ServletUtils.getContextPath();
         if (StringUtils.isNotBlank(contextPath)) {
             url = contextPath + url;
         }
@@ -85,6 +84,7 @@ public class IndexController {
     @GetMapping("/tempMobileLink/{id}/{token}")
     public void tempMobileLink(@PathVariable("id") String id, @PathVariable("token") String token) {
         String url = "/#preview/" + id;
+        String contextPath = ServletUtils.getContextPath();
         if (StringUtils.isNotBlank(contextPath)) {
             url = contextPath + url;
         }
