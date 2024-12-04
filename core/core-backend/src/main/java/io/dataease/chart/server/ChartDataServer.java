@@ -269,7 +269,7 @@ public class ChartDataServer implements ChartDataApi {
                         request.getViewInfo().getChartExtRequest().setGoPage(i);
                         findExcelData(request);
                         details.addAll(request.getDetails());
-                        if ((details.size() + extractPageSize) > sheetLimit) {
+                        if ((details.size() + extractPageSize) > sheetLimit || i == chartViewDTO.getTotalPage()) {
                             detailsSheet = wb.createSheet("数据" + sheetIndex);
                             Integer[] excelTypes = request.getExcelTypes();
                             details.add(0, request.getHeader());
