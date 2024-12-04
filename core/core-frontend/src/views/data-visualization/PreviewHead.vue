@@ -18,31 +18,31 @@ import ShareVisualHead from '@/views/share/share/ShareVisualHead.vue'
 import { XpackComponent } from '@/components/plugin'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import { useShareStoreWithOut } from '@/store/modules/share'
-const shareStore = useShareStoreWithOut()
+import { exportPermission } from '@/utils/utils'
+import { useCache } from '@/hooks/web/useCache'
 
+const shareStore = useShareStoreWithOut()
+const { wsCache } = useCache('localStorage')
 const dvMainStore = dvMainStoreWithOut()
 const appStore = useAppStoreWithOut()
 const { dvInfo } = storeToRefs(dvMainStore)
 const emit = defineEmits(['reload', 'download', 'downloadAsAppTemplate'])
 const { t } = useI18n()
 const embeddedStore = useEmbedded()
-
+const openType = wsCache.get('open-backend') === '1' ? '_self' : '_blank'
 const favorited = ref(false)
 const preview = () => {
-  const href = window.location.href
-  let baseUrl = isDataEaseBi.value ? embeddedStore.baseUrl : href.substring(0, href.indexOf('#'))
-  if (baseUrl.includes('oidcbi/') || baseUrl.includes('casbi/')) {
-    baseUrl = baseUrl.replace('oidcbi/', '')
-    baseUrl = baseUrl.replace('casbi/', '')
-  }
-  const url = baseUrl + '#/preview?&ignoreParams=true&dvId=' + dvInfo.value.id
+  const baseUrl = isDataEaseBi.value ? embeddedStore.baseUrl : ''
+  const url = baseUrl + '#/preview?dvId=' + dvInfo.value.id + '&ignoreParams=true'
   const newWindow = window.open(url, '_blank')
   initOpenHandler(newWindow)
 }
 const isDataEaseBi = computed(() => appStore.getIsDataEaseBi)
 const isIframe = computed(() => appStore.getIsIframe)
 const shareDisable = computed(() => shareStore.getShareDisable)
-
+const exportPermissions = computed(() =>
+  exportPermission(dvInfo.value['weight'], dvInfo.value['ext'])
+)
 const reload = () => {
   emit('reload', dvInfo.value.id)
 }
@@ -69,7 +69,7 @@ const dvEdit = () => {
     return
   }
   const baseUrl = dvInfo.value.type === 'dataV' ? '#/dvCanvas?dvId=' : '#/dashboard?resourceId='
-  const newWindow = window.open(baseUrl + dvInfo.value.id, '_blank')
+  const newWindow = window.open(baseUrl + dvInfo.value.id, openType)
   initOpenHandler(newWindow)
 }
 
@@ -114,7 +114,7 @@ const initOpenHandler = newWindow => {
 
     <el-tooltip
       effect="dark"
-      :content="favorited ? '取消收藏' : t('visualization.store')"
+      :content="favorited ? t('visualization.cancel_store') : t('visualization.store')"
       placement="top"
     >
       <el-icon
@@ -132,7 +132,9 @@ const initOpenHandler = newWindow => {
     </el-tooltip>
     <el-divider style="margin: 0 16px 0 7px" direction="vertical" />
     <div class="create-area flex-align-center">
-      <span style="line-height: 22px">创建人:{{ dvInfo.creatorName }}</span>
+      <span style="line-height: 22px"
+        >{{ t('visualization.creator') }}:{{ dvInfo.creatorName }}</span
+      >
       <el-popover show-arrow :offset="8" placement="bottom" width="400" trigger="hover">
         <template #reference>
           <el-icon class="info-tips"
@@ -151,7 +153,7 @@ const initOpenHandler = newWindow => {
         <template #icon>
           <icon name="icon_pc_fullscreen"><icon_pc_fullscreen class="svg-icon" /></icon>
         </template>
-        全屏</el-button
+        {{ t('visualization.fullscreen') }}</el-button
       >
       <el-button secondary @click="preview()">
         <template #icon>
@@ -169,7 +171,7 @@ const initOpenHandler = newWindow => {
         <template #icon>
           <icon name="icon_edit_outlined"><icon_edit_outlined class="svg-icon" /></icon>
         </template>
-        编辑</el-button
+        {{ t('visualization.edit') }}</el-button
       >
       <el-dropdown trigger="click">
         <el-icon class="head-more-icon">
@@ -177,16 +179,18 @@ const initOpenHandler = newWindow => {
         </el-icon>
         <template #dropdown>
           <el-dropdown-menu style="width: 130px">
-            <el-dropdown-item icon="Refresh" @click="reload()">刷新数据 </el-dropdown-item>
+            <el-dropdown-item icon="Refresh" @click="reload()"
+              >{{ t('visualization.refresh_data') }}
+            </el-dropdown-item>
             <el-dropdown
               style="width: 100%; overflow: hidden"
               trigger="hover"
               placement="left-start"
-              v-if="dvInfo.weight > 3"
+              v-if="exportPermissions[0]"
             >
               <div class="ed-dropdown-menu__item flex-align-center icon">
                 <el-icon><Download /></el-icon>
-                导出为&nbsp;&nbsp;&nbsp;&nbsp;
+                {{ t('visualization.export_as') }}&nbsp;&nbsp;&nbsp;&nbsp;
                 <el-icon><ArrowRight /></el-icon>
               </div>
               <template #dropdown>

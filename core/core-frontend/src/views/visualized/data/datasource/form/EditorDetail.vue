@@ -367,6 +367,7 @@ const copyItem = (item?: ApiConfiguration) => {
   newItem.deTableName = ''
   newItem.serialNumber =
     form.value.apiConfiguration[form.value.apiConfiguration.length - 1].serialNumber + 1
+  newItem.copy = true
   const reg = new RegExp(item.name + '_copy_' + '([0-9]*)', 'gim')
   let number = 0
   for (let i = 1; i < form.value.apiConfiguration.length; i++) {
@@ -389,9 +390,11 @@ const copyItem = (item?: ApiConfiguration) => {
 }
 const addApiItem = item => {
   let apiItem = null
+  let editItem = false
   api_table_title.value = t('datasource.data_table')
   if (item) {
     apiItem = cloneDeep(item)
+    editItem = true
   } else {
     apiItem = cloneDeep(defaultApiItem)
     apiItem.type = activeName.value
@@ -400,14 +403,13 @@ const addApiItem = item => {
         ? form.value.apiConfiguration[form.value.apiConfiguration.length - 1].serialNumber + 1
         : 0
     let serialNumber2 =
-      form.value.paramsConfiguration.length > 0
+      form.value.paramsConfiguration && form.value.paramsConfiguration.length > 0
         ? form.value.paramsConfiguration[form.value.paramsConfiguration.length - 1].serialNumber + 1
         : 0
-
     apiItem.serialNumber = serialNumber1 + serialNumber2
   }
   nextTick(() => {
-    editApiItem.value.initApiItem(apiItem, form.value, activeName.value)
+    editApiItem.value.initApiItem(apiItem, form.value, activeName.value, editItem)
   })
 }
 
@@ -450,14 +452,18 @@ const returnItem = apiItem => {
       form.value.apiConfiguration.push(apiItem)
     }
   } else {
-    for (let i = 0; i < form.value.paramsConfiguration.length; i++) {
-      if (form.value.paramsConfiguration[i].serialNumber === apiItem.serialNumber) {
-        find = true
-        form.value.paramsConfiguration[i] = apiItem
-        if (apiItem.serialNumber === activeParamsID.value) {
-          setActiveName(apiItem)
+    if (form.value.paramsConfiguration) {
+      for (let i = 0; i < form.value.paramsConfiguration.length; i++) {
+        if (form.value.paramsConfiguration[i].serialNumber === apiItem.serialNumber) {
+          find = true
+          form.value.paramsConfiguration[i] = apiItem
+          if (apiItem.serialNumber === activeParamsID.value) {
+            setActiveName(apiItem)
+          }
         }
       }
+    } else {
+      form.value.paramsConfiguration = []
     }
     if (!find) {
       state.itemRef = []
@@ -780,7 +786,10 @@ defineExpose({
           <div class="title-form_primary flex-space table-info-mr" v-show="activeStep !== 2">
             <el-tabs v-model="activeName" class="api-tabs">
               <el-tab-pane :label="t('datasource.data_table')" name="table"></el-tab-pane>
-              <el-tab-pane :label="t('data_source.connection_method')" name="params"></el-tab-pane>
+              <el-tab-pane
+                :label="t('data_source.interface_parameters')"
+                name="params"
+              ></el-tab-pane>
             </el-tabs>
             <el-button type="primary" style="margin-left: auto" @click="() => addApiItem(null)">
               <template #icon>

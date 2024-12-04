@@ -98,6 +98,7 @@ const switchHandler = (id: number | string) => {
     const token = res.data.token
     userStore.setToken(token)
     userStore.setExp(res.data.exp)
+    userStore.setTime(Date.now())
     window.location.reload()
   })
 }

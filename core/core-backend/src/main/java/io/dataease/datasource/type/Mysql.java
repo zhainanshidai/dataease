@@ -20,6 +20,11 @@ public class Mysql extends DatasourceConfiguration {
 
     public String getJdbc() {
         if(StringUtils.isNoneEmpty(getUrlType()) && !getUrlType().equalsIgnoreCase("hostName")){
+            for (String illegalParameter : illegalParameters) {
+                if (getJdbcUrl().toLowerCase().contains(illegalParameter.toLowerCase()) || URLDecoder.decode(getExtraParams()).contains(illegalParameter.toLowerCase())) {
+                    DEException.throwException("Illegal parameter: " + illegalParameter);
+                }
+            }
             return getJdbcUrl();
         }
         if (StringUtils.isEmpty(extraParams.trim())) {

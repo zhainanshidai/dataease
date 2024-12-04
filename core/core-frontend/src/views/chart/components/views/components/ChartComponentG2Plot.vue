@@ -23,8 +23,8 @@ import { defaultsDeep, cloneDeep } from 'lodash-es'
 import ChartError from '@/views/chart/components/views/components/ChartError.vue'
 import { BASE_VIEW_CONFIG } from '../../editor/util/chart'
 import { customAttrTrans, customStyleTrans, recursionTransObj } from '@/utils/canvasStyle'
-import { deepCopy } from '@/utils/utils'
-import { trackBarStyleCheck } from '@/utils/canvasUtils'
+import { deepCopy, isMobile } from '@/utils/utils'
+import { isDashboard, trackBarStyleCheck } from '@/utils/canvasUtils'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import { L7ChartView } from '@/views/chart/components/js/panel/types/impl/l7'
 
@@ -68,6 +68,11 @@ const props = defineProps({
     type: String,
     required: false,
     default: 'common'
+  },
+  fontFamily: {
+    type: String,
+    required: false,
+    default: 'inherit'
   }
 })
 
@@ -87,10 +92,16 @@ const { view, showPosition, scale, terminal, suffixId } = toRefs(props)
 const isError = ref(false)
 const errMsg = ref('')
 const linkageActiveHistory = ref(false)
-const antVRenderStatus = ref(false)
+
+const dataVMobile = !isDashboard() && isMobile()
 
 const state = reactive({
   trackBarStyle: {
+    position: 'absolute',
+    left: '50px',
+    top: '50px'
+  },
+  trackBarStyleMobile: {
     position: 'absolute',
     left: '50px',
     top: '50px'
@@ -178,12 +189,18 @@ const calcData = async (view, callback) => {
           emit('onDrillFilters', res?.drillFilters)
           if (!res?.drillFilters?.length) {
             dynamicAreaId.value = ''
+            scope = null
           } else {
-            dynamicAreaId.value =
-              view.chartExtRequest?.drill?.[res?.drillFilters?.length - 1].extra?.adcode + ''
+            const extra = view.chartExtRequest?.drill?.[res?.drillFilters?.length - 1].extra
+            dynamicAreaId.value = extra?.adcode + ''
+            scope = extra?.scope
             // 地图
             if (!dynamicAreaId.value?.startsWith(country.value)) {
-              dynamicAreaId.value = country.value + dynamicAreaId.value
+              if (country.value === 'cus') {
+                dynamicAreaId.value = '156' + dynamicAreaId.value
+              } else {
+                dynamicAreaId.value = country.value + dynamicAreaId.value
+              }
             }
           }
           dvMainStore.setViewDataDetails(view.id, res)
@@ -214,7 +231,8 @@ const renderChart = async (view, callback?) => {
   // 与默认图表对象合并，方便增加配置项
   const chart = deepCopy({
     ...defaultsDeep(view, cloneDeep(BASE_VIEW_CONFIG)),
-    data: chartData.value
+    data: chartData.value,
+    fontFamily: props.fontFamily
   })
   const chartView = chartViewManager.getChartView(view.render, view.type)
   recursionTransObj(customAttrTrans, chart.customAttr, scale.value, terminal.value)
@@ -263,6 +281,7 @@ const dynamicAreaId = ref('')
 const country = ref('')
 const appStore = useAppStoreWithOut()
 const chartContainer = ref<HTMLElement>(null)
+let scope
 let mapTimer: number
 const renderL7Plot = async (chart: ChartObj, chartView: L7PlotChartView<any, any>, callback) => {
   const map = parseJson(chart.customAttr).map
@@ -288,7 +307,8 @@ const renderL7Plot = async (chart: ChartObj, chartView: L7PlotChartView<any, any
       container: containerId,
       chart,
       areaId,
-      action
+      action,
+      scope
     })
     callback?.()
     emit('resetLoading')
@@ -355,12 +375,24 @@ const action = param => {
       top: param.y + 10
     }
     trackBarStyleCheck(props.element, barStyleTemp, props.scale, trackMenu.value.length)
+    const trackBarX = barStyleTemp.left
+    let trackBarY = 50
     state.trackBarStyle.left = barStyleTemp.left + 'px'
     if (curView.type === 'symbolic-map') {
+      trackBarY = param.y + 10
       state.trackBarStyle.top = param.y + 10 + 'px'
     } else {
+      trackBarY = barStyleTemp.top
       state.trackBarStyle.top = barStyleTemp.top + 'px'
     }
+    if (dataVMobile) {
+      state.trackBarStyle.left = trackBarX + 40 + 'px'
+      state.trackBarStyle.top = trackBarY + 70 + 'px'
+    } else {
+      state.trackBarStyle.left = trackBarX + 'px'
+      state.trackBarStyle.top = trackBarY + 'px'
+    }
+
     viewTrack.value.trackButtonClick()
   }
 }
@@ -568,6 +600,8 @@ onBeforeUnmount(() => {
     <view-track-bar
       ref="viewTrack"
       :track-menu="trackMenu"
+      :font-family="fontFamily"
+      :is-data-v-mobile="dataVMobile"
       class="track-bar"
       :style="state.trackBarStyle"
       @trackClick="trackClick"

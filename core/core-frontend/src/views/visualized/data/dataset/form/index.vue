@@ -27,6 +27,7 @@ import {
   onMounted,
   onBeforeUnmount
 } from 'vue'
+import { useCache } from '@/hooks/web/useCache'
 import { useI18n } from '@/hooks/web/useI18n'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import { ElIcon, ElMessageBox, ElMessage } from 'element-plus-secondary'
@@ -72,6 +73,7 @@ interface Field {
   originName: string
   deType: number
 }
+const { wsCache } = useCache()
 const appStore = useAppStoreWithOut()
 const embeddedStore = useEmbedded()
 const { t } = useI18n()
@@ -249,12 +251,17 @@ const pushDataset = () => {
     return
   }
   const routeName = embeddedStore.getToken && appStore.getIsIframe ? 'dataset-embedded' : 'dataset'
-  push({
-    name: routeName,
-    params: {
-      id: nodeInfo.id
-    }
-  })
+  wsCache.set(`${routeName}-info-id`, nodeInfo.id)
+  if (!!history.state.back) {
+    history.back()
+  } else {
+    push({
+      name: routeName,
+      params: {
+        id: nodeInfo.id
+      }
+    })
+  }
 }
 
 const backToMain = () => {
@@ -750,6 +757,7 @@ const tabChange = val => {
 
 const addComplete = () => {
   state.nodeNameList = [...datasetDrag.value.nodeNameList]
+  changeUpdate()
   if (!state.nodeNameList?.length) {
     columns.value = []
     tableData.value = []
@@ -1040,10 +1048,6 @@ onMounted(async () => {
   await new Promise(r => (p = r))
   await initEdite()
   getDatasource()
-  useEmitt({
-    name: 'onDatasetSave',
-    callback: saveAndBack
-  })
   window.addEventListener('resize', handleResize)
   getSqlResultHeight()
   quotaTableHeight.value = sqlResultHeight.value - 242
@@ -1221,6 +1225,15 @@ const setDeTypeSelection = () => {
   }
   deTypeArr.value =
     obj.deType === 1 && obj.deExtractType === 0 ? [1, obj.dateFormatType] : [obj.deType]
+}
+
+const rowClick = (_, __, event) => {
+  const element = event.target.parentNode.parentNode
+  if ([...element.classList].includes('no-hide')) {
+    element.classList.remove('no-hide')
+    return
+  }
+  element.classList.add('no-hide')
 }
 
 let oldArrValue = []
@@ -1673,6 +1686,8 @@ const getDsIconName = data => {
             </div>
             <div class="preview-data">
               <el-table
+                class="dataset-preview_table"
+                @row-click="rowClick"
                 v-loading="datasetPreviewLoading"
                 header-class="header-cell"
                 :data="tableData"
@@ -2175,7 +2190,11 @@ const getDsIconName = data => {
       </template>
     </el-drawer>
   </div>
-  <creat-ds-group @finish="finish" ref="creatDsFolder"></creat-ds-group>
+  <creat-ds-group
+    @finish="finish"
+    @onDatasetSave="saveAndBack"
+    ref="creatDsFolder"
+  ></creat-ds-group>
   <el-dialog
     custom-class="calc-field-edit-dialog"
     v-model="editCalcField"
@@ -2242,6 +2261,16 @@ const getDsIconName = data => {
 
 <style lang="less" scoped>
 @import '@/style/mixin.less';
+
+:deep(.dataset-preview_table) {
+  .ed-table__body {
+    .ed-table__row:not(.no-hide) {
+      .cell {
+        white-space: nowrap;
+      }
+    }
+  }
+}
 
 .ed-table {
   --ed-table-header-bg-color: #f5f6f7;
@@ -2709,19 +2738,6 @@ const getDsIconName = data => {
   line-height: 14px;
 }
 
-.cascader-panel {
-  .ed-scrollbar__wrap {
-    height: 210px;
-  }
-  .ed-cascader-node__label {
-    display: flex;
-    align-items: center;
-    .ed-icon {
-      margin-right: 5px;
-    }
-  }
-}
-
 .batch-operate {
   width: 100%;
   height: 64px;
@@ -2777,6 +2793,18 @@ const getDsIconName = data => {
 </style>
 
 <style lang="less">
+.cascader-panel {
+  .ed-scrollbar__wrap {
+    height: 210px !important;
+  }
+  .ed-cascader-node__label {
+    display: flex;
+    align-items: center;
+    .ed-icon {
+      margin-right: 5px;
+    }
+  }
+}
 .select-type {
   .ed-input__wrapper {
     padding-left: 32px;
@@ -2806,11 +2834,6 @@ const getDsIconName = data => {
   .ed-dialog__footer {
     padding-top: 24px;
     border: 1px solid rgba(31, 35, 41, 0.15);
-  }
-}
-.cascader-panel {
-  .ed-scrollbar__wrap {
-    height: 210px;
   }
 }
 </style>

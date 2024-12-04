@@ -2,6 +2,7 @@
 import icon_edit_outlined from '@/assets/svg/icon_edit_outlined.svg'
 import icon_deleteTrash_outlined from '@/assets/svg/icon_delete-trash_outlined.svg'
 import eventBus from '@/utils/eventBus'
+import { isISOMobile, isMobile } from '@/utils/utils'
 import { ElMessage } from 'element-plus-secondary'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
 import QueryConditionConfiguration from './QueryConditionConfiguration.vue'
@@ -256,6 +257,7 @@ const releaseSelect = id => {
 
 const queryDataForId = id => {
   let requiredName = ''
+  let numName = ''
   const emitterList = (element.value.propValue || [])
     .filter(ele => ele.id === id)
     .reduce((pre, next) => {
@@ -288,6 +290,22 @@ const queryDataForId = id => {
           requiredName = next.name
         }
       }
+
+      if (next.displayType === '22') {
+        if (
+          !isNaN(next.numValueEnd) &&
+          !isNaN(next.numValueStart) &&
+          next.numValueEnd < next.numValueStart
+        ) {
+          numName = next.name
+        }
+        if (
+          [next.numValueEnd, next.numValueStart].filter(itx => ![null, undefined, ''].includes(itx))
+            .length === 1
+        ) {
+          requiredName = next.name
+        }
+      }
       const keyList = Object.entries(next.checkedFieldsMap)
         .filter(ele => next.checkedFields.includes(ele[0]))
         .filter(ele => !!ele[1])
@@ -297,6 +315,10 @@ const queryDataForId = id => {
     }, [])
   if (!!requiredName) {
     ElMessage.error(`【${requiredName}】${t('v_query.before_querying')}`)
+    return
+  }
+  if (!!numName) {
+    ElMessage.error(`【${numName}】${t('v_query.the_minimum_value')}`)
     return
   }
   if (!emitterList.length) return
@@ -339,6 +361,7 @@ onBeforeUnmount(() => {
 })
 
 const updateQueryCriteria = () => {
+  if (dvMainStore.mobileInPc && !isMobile()) return
   Array.isArray(element.value.propValue) &&
     element.value.propValue.forEach(ele => {
       if (ele.auto) {
@@ -380,6 +403,10 @@ onMounted(() => {
   emitter.on(`editQueryCriteria${element.value.id}`, editQueryCriteria)
   emitter.on(`updateQueryCriteria${element.value.id}`, updateQueryCriteria)
   updateQueryCriteria()
+
+  if (dvMainStore.mobileInPc && !isMobile()) {
+    queryData()
+  }
 })
 
 const dragover = () => {
@@ -597,11 +624,13 @@ const queryData = () => {
   }
 
   if (!!numName) {
-    ElMessage.error(`【${numName}】数值区间最大值必须大于最小值`)
+    ElMessage.error(`【${numName}】${t('v_query.the_minimum_value')}`)
     return
   }
   if (!emitterList.length) return
-  dvMainStore.setFirstLoadMap([...new Set([...emitterList, ...firstLoadMap.value])])
+  if (!(dvMainStore.mobileInPc && !isMobile())) {
+    dvMainStore.setFirstLoadMap([...new Set([...emitterList, ...firstLoadMap.value])])
+  }
   emitterList.forEach(ele => {
     emitter.emit(`query-data-${ele}`)
   })
@@ -645,7 +674,18 @@ const marginRight = computed<CSSProperties>(() => {
 })
 
 const autoStyle = computed(() => {
-  return { zoom: scale.value }
+  if (isISOMobile()) {
+    return {
+      position: 'absolute',
+      height: 100 / scale.value + '%!important',
+      width: 100 / scale.value + '%!important',
+      left: 50 * (1 - 1 / scale.value) + '%', // 放大余量 除以 2
+      top: 50 * (1 - 1 / scale.value) + '%', // 放大余量 除以 2
+      transform: 'scale(' + scale.value + ') translateZ(0)'
+    } as CSSProperties
+  } else {
+    return { zoom: scale.value }
+  }
 })
 </script>
 
@@ -669,6 +709,7 @@ const autoStyle = computed(() => {
           <el-button
             :disabled="showPosition === 'preview' || mobileInPc"
             @click="addCriteriaConfigOut"
+            style="font-family: inherit"
             text
           >
             {{ t('v_query.add_query_condition') }}
@@ -796,7 +837,6 @@ const autoStyle = computed(() => {
       justify-content: center;
       color: #646a73;
       text-align: center;
-      font-family: var(--de-custom_font, 'PingFang');
       font-size: 16px;
       font-style: normal;
       font-weight: 400;
@@ -812,7 +852,6 @@ const autoStyle = computed(() => {
   .title {
     color: #1f2329;
     font-feature-settings: 'clig' off, 'liga' off;
-    font-family: var(--de-custom_font, 'PingFang');
     font-size: 14px;
     font-style: normal;
     font-weight: 500;
@@ -871,7 +910,6 @@ const autoStyle = computed(() => {
           text-overflow: ellipsis;
           white-space: nowrap;
           color: #1f2329;
-          font-family: var(--de-custom_font, 'PingFang');
           font-size: 14px;
           font-style: normal;
           font-weight: 400;

@@ -1,6 +1,7 @@
-import { hexColorToRGBA, parseJson } from '../../util'
+import { hexColorToRGBA, isAlphaColor, isTransparent, measureText, parseJson } from '../../util'
 import {
   DEFAULT_BASIC_STYLE,
+  DEFAULT_LEGEND_STYLE,
   DEFAULT_XAXIS_STYLE,
   DEFAULT_YAXIS_EXT_STYLE,
   DEFAULT_YAXIS_STYLE
@@ -32,6 +33,7 @@ import { PositionType } from '@antv/l7-core'
 import { centroid } from '@turf/centroid'
 import type { Plot } from '@antv/g2plot'
 import type { PickOptions } from '@antv/g2plot/lib/core/plot'
+import { defaults } from 'lodash-es'
 
 export function getPadding(chart: Chart): number[] {
   if (chart.drill) {
@@ -144,6 +146,9 @@ export function getTheme(chart: Chart) {
       }
     }
   }
+  if (chart.fontFamily) {
+    theme.styleSheet.fontFamily = chart.fontFamily
+  }
   return theme
 }
 // 通用label
@@ -172,6 +177,11 @@ export function getLabel(chart: Chart) {
               'bar'
             ].includes(chart.type)
           ) {
+            layout.push({ type: 'limit-in-canvas' })
+            layout.push({ type: 'hide-overlap' })
+          } else if (chart.type.includes('chart-mix')) {
+            layout.push({ type: 'limit-in-canvas' })
+            layout.push({ type: 'limit-in-plot' })
             layout.push({ type: 'hide-overlap' })
           } else {
             layout.push({ type: 'limit-in-plot' })
@@ -184,7 +194,8 @@ export function getLabel(chart: Chart) {
           layout,
           style: {
             fill: l.color,
-            fontSize: l.fontSize
+            fontSize: l.fontSize,
+            fontFamily: chart.fontFamily
           },
           formatter: function (param: Datum) {
             return valueFormatter(param.value, l.labelFormatter)
@@ -280,7 +291,7 @@ export function getLegend(chart: Chart) {
     customStyle = parseJson(chart.customStyle)
     // legend
     if (customStyle.legend) {
-      const l = JSON.parse(JSON.stringify(customStyle.legend))
+      const l = defaults(JSON.parse(JSON.stringify(customStyle.legend)), DEFAULT_LEGEND_STYLE)
       if (l.show) {
         let offsetX, offsetY, position
         const orient = l.orient
@@ -329,7 +340,7 @@ export function getLegend(chart: Chart) {
             if (chart.drill) {
               offsetY = -18
             } else {
-              offsetY = -6
+              offsetY = -10
             }
           } else {
             offsetY = 0
@@ -344,16 +355,23 @@ export function getLegend(chart: Chart) {
           marker: {
             symbol: legendSymbol,
             style: {
-              r: 4
+              r: l.size
             }
           },
-          itemHeight: l.fontSize + 4,
+          itemName: {
+            style: {
+              fill: l.color,
+              fontSize: l.fontSize
+            }
+          },
+          itemHeight: (l.fontSize > l.size * 2 ? l.fontSize : l.size * 2) + 4,
           radio: false,
           pageNavigator: {
             marker: {
               style: {
                 fill: 'rgba(0,0,0,0.65)',
-                stroke: 'rgba(192,192,192,0.52)'
+                stroke: 'rgba(192,192,192,0.52)',
+                size: l.size * 2
               }
             },
             text: {
@@ -434,6 +452,11 @@ export function getXAxis(chart: Chart) {
                 fill: a.axisLabel.color,
                 fontSize: a.axisLabel.fontSize,
                 textAlign: textAlign
+              },
+              formatter: value => {
+                return chart.type === 'bidirectional-bar' && value.length > a.axisLabel.lengthLimit
+                  ? value.substring(0, a.axisLabel.lengthLimit) + '...'
+                  : value
               }
             }
           : null
@@ -532,6 +555,11 @@ export function getYAxis(chart: Chart) {
           fontSize: yAxis.axisLabel.fontSize,
           textBaseline,
           textAlign
+        },
+        formatter: value => {
+          return value.length > yAxis.axisLabel.lengthLimit
+            ? value.substring(0, yAxis.axisLabel.lengthLimit) + '...'
+            : value
         }
       }
     : null
@@ -542,7 +570,8 @@ export function getYAxis(chart: Chart) {
     grid,
     label,
     line,
-    tickLine
+    tickLine,
+    nice: true
   }
   return axis
 }
@@ -635,7 +664,8 @@ export function getYAxisExt(chart: Chart) {
     grid,
     label,
     line,
-    tickLine
+    tickLine,
+    nice: true
   }
   return axis
 }
@@ -666,7 +696,8 @@ export function getSlider(chart: Chart) {
       }
       if (senior.functionCfg.sliderTextColor) {
         cfg.textStyle = {
-          fill: senior.functionCfg.sliderTextColor
+          fill: senior.functionCfg.sliderTextColor,
+          fontFamily: chart.fontFamily
         }
         cfg.handlerStyle = {
           fill: senior.functionCfg.sliderTextColor,
@@ -805,9 +836,9 @@ export function getAnalyseHorizontal(chart: Chart) {
       })
       assistLine.push({
         type: 'text',
-        position: [xAxisPosition === 'left' ? 'start' : 'end', value],
+        position: ['start', value],
         content: content,
-        offsetY: xAxisPosition === 'left' ? -2 : -10 * (content.length - 2),
+        offsetY: 5,
         offsetX: 2,
         rotate: Math.PI / 2,
         style: {
@@ -882,6 +913,9 @@ export function configL7Label(chart: Chart): false | LabelOptions {
   if (!label.fullDisplay) {
     style.textAllowOverlap = false
     style.padding = [2, 2]
+  }
+  if (chart.fontFamily) {
+    style.fontFamily = chart.fontFamily
   }
   return {
     visible: label.show,
@@ -961,7 +995,8 @@ export function configL7Tooltip(chart: Chart): TooltipOptions {
       'l7plot-tooltip': {
         'background-color': tooltip.backgroundColor,
         'font-size': `${tooltip.fontSize}px`,
-        'line-height': 1.6
+        'line-height': 1.6,
+        'font-family': chart.fontFamily ? chart.fontFamily : undefined
       },
       'l7plot-tooltip__name': {
         color: tooltip.color
@@ -1160,9 +1195,15 @@ export function configL7Zoom(chart: Chart, plot: L7Plot<PlotOptions> | Scene) {
     return
   }
   if (!plotScene?.getControlByName('zoom')) {
+    let initZoom = basicStyle.autoFit === false ? basicStyle.zoomLevel : 2.5
+    let center = getCenter(basicStyle)
+    if (['map', 'bubble-map'].includes(chart.type)) {
+      initZoom = plotScene.getZoom()
+      center = plotScene.getCenter()
+    }
     const newZoomOptions = {
-      initZoom: basicStyle.autoFit === false ? basicStyle.zoomLevel : 2.5,
-      center: getCenter(basicStyle),
+      initZoom: initZoom,
+      center: center,
       buttonColor: basicStyle.zoomButtonColor,
       buttonBackground: basicStyle.zoomBackground
     } as any
@@ -1328,3 +1369,234 @@ export const TOOLTIP_TPL =
   '<span class="g2-tooltip-name">{name}</span>:' +
   '<span class="g2-tooltip-value">{value}</span>' +
   '</li>'
+
+export function getConditions(chart: Chart) {
+  const { threshold } = parseJson(chart.senior)
+  const annotations = []
+  if (!threshold.enable || chart.type === 'area-stack') return annotations
+  const conditions = threshold.lineThreshold ?? []
+  const yAxisIds = chart.yAxis.map(i => i.id)
+  for (const field of conditions) {
+    if (!yAxisIds.includes(field.fieldId)) {
+      continue
+    }
+    for (const t of field.conditions) {
+      const annotation = {
+        type: 'regionFilter',
+        start: ['start', 'median'],
+        end: ['end', 'min'],
+        color: t.color
+      }
+      // 加中线
+      const annotationLine = {
+        type: 'line',
+        start: ['start', t.value],
+        end: ['end', t.value],
+        style: {
+          stroke: t.color,
+          lineDash: [2, 2]
+        }
+      }
+      if (t.term === 'between') {
+        annotation.start = ['start', parseFloat(t.min)]
+        annotation.end = ['end', parseFloat(t.max)]
+        annotationLine.start = ['start', parseFloat(t.min)]
+        annotationLine.end = ['end', parseFloat(t.min)]
+        annotations.push(JSON.parse(JSON.stringify(annotationLine)))
+        annotationLine.start = ['start', parseFloat(t.max)]
+        annotationLine.end = ['end', parseFloat(t.max)]
+        annotations.push(annotationLine)
+      } else if (['lt', 'le'].includes(t.term)) {
+        annotation.start = ['start', t.value]
+        annotation.end = ['end', 'min']
+        annotations.push(annotationLine)
+      } else if (['gt', 'ge'].includes(t.term)) {
+        annotation.start = ['start', t.value]
+        annotation.end = ['end', 'max']
+        annotations.push(annotationLine)
+      }
+      annotations.push(annotation)
+    }
+  }
+  return annotations
+}
+const AXIS_LABEL_TOOLTIP_STYLE = {
+  transition:
+    'left 0.4s cubic-bezier(0.23, 1, 0.32, 1) 0s, top 0.4s cubic-bezier(0.23, 1, 0.32, 1) 0s',
+  backgroundColor: 'rgb(255, 255, 255)',
+  boxShadow: 'rgb(174, 174, 174) 0px 0px 10px',
+  borderRadius: '3px',
+  padding: '8px 12px',
+  opacity: '0.95',
+  position: 'absolute',
+  visibility: 'visible'
+}
+const AXIS_LABEL_TOOLTIP_TPL =
+  '<div class="g2-axis-label-tooltip">' + '<div class="g2-tooltip-title">{title}</div>' + '</div>'
+export function configAxisLabelLengthLimit(chart, plot, triggerObjName) {
+  // 设置触发事件的名称，如果未传入，则默认为 'axis-label'
+  const triggerName = triggerObjName || 'axis-label'
+
+  // 判断是否是Y轴标题
+  const isYaxisTitle = triggerName === 'axis-title'
+
+  // 解析图表的自定义样式和属性
+  const { customStyle, customAttr } = parseJson(chart)
+  const { lengthLimit, fontSize, color, show } = customStyle.yAxis.axisLabel
+  const { tooltip } = customAttr
+
+  // 如果不是标题，判断没有设置长度限制、没有显示或Y轴不显示，或图表类型为双向条形图，则不执行后续操作
+  if (
+    !isYaxisTitle &&
+    (!lengthLimit || !show || !customStyle.yAxis.show || chart.type === 'bidirectional-bar')
+  )
+    return
+
+  // 鼠标进入事件
+  plot.on(triggerName + ':mouseenter', e => {
+    const field = e.target.cfg.delegateObject.component.cfg.field
+    const position = e.target.cfg.delegateObject.component.cfg.position
+    const isYaxis = position === 'left' || position === 'right'
+
+    // 如果不是 'field' 或 'title'，且不是Y轴，直接返回
+    if (field !== 'field' && field !== 'title' && !isYaxis) return
+
+    // 获取轴标签的实际内容
+    const realContent = e.target.attrs.text
+
+    // 不是标题时，判断标签长度小于限制或已经省略（以'...'结尾），则不显示 tooltip
+    if (
+      isYaxisTitle ? false : realContent.length < lengthLimit || !(realContent.slice(-3) === '...')
+    )
+      return
+
+    // 获取当前鼠标事件的坐标
+    const { x, y } = e
+    const parentNode = e.event.target.parentNode
+
+    // 获取父节点中是否已有 tooltip
+    let labelTooltipDom = parentNode.getElementsByClassName('g2-axis-label-tooltip')[0]
+
+    // 获取轴的标题
+    const title =
+      e.target.cfg.delegateObject.item?.name ||
+      e.target.cfg.delegateObject.axis.cfg.title.originalText
+
+    // 如果没有 tooltip，创建新的 tooltip DOM 元素
+    if (!labelTooltipDom) {
+      const domStr = substitute(AXIS_LABEL_TOOLTIP_TPL, { title })
+      labelTooltipDom = createDom(domStr)
+
+      // 设置 tooltip 的样式
+      AXIS_LABEL_TOOLTIP_STYLE.backgroundColor = tooltip.backgroundColor
+      AXIS_LABEL_TOOLTIP_STYLE.boxShadow = `${tooltip.backgroundColor} 0px 0px 5px`
+      AXIS_LABEL_TOOLTIP_STYLE.maxWidth = '200px'
+      _.assign(labelTooltipDom.style, AXIS_LABEL_TOOLTIP_STYLE)
+
+      // 将 tooltip 添加到父节点
+      parentNode.appendChild(labelTooltipDom)
+    } else {
+      // 如果已有 tooltip，更新其标题并使其可见
+      labelTooltipDom.getElementsByClassName('g2-tooltip-title')[0].innerHTML = title
+      labelTooltipDom.style.visibility = 'visible'
+    }
+
+    // 获取父节点的尺寸和 tooltip 的尺寸
+    const { height, width } = parentNode.getBoundingClientRect()
+    const { offsetHeight, offsetWidth } = labelTooltipDom
+
+    // 如果 tooltip 的尺寸超出了父节点的尺寸，则将其位置重置为 (0, 0)
+    if (offsetHeight > height || offsetWidth > width) {
+      labelTooltipDom.style.left = labelTooltipDom.style.top = '0px'
+      return
+    }
+
+    // 计算 tooltip 的初始位置
+    const initPosition = { left: x + 10, top: y + 15 }
+
+    // 调整位置，避免 tooltip 超出边界
+    if (initPosition.left + offsetWidth > width) initPosition.left = width - offsetWidth - 10
+    if (initPosition.top + offsetHeight > height) initPosition.top -= offsetHeight + 15
+
+    // 设置 tooltip 的位置和样式
+    labelTooltipDom.style.left = `${initPosition.left}px`
+    labelTooltipDom.style.top = `${initPosition.top}px`
+    labelTooltipDom.style.color = color
+    labelTooltipDom.style.fontSize = `${fontSize}px`
+  })
+
+  // 鼠标离开事件
+  plot.on(triggerName + ':mouseleave', e => {
+    const field = e.target.cfg.delegateObject.component.cfg.field
+    const position = e.target.cfg.delegateObject.component.cfg.position
+    const isYaxis = position === 'left' || position === 'right'
+
+    // 如果不是 'field' 或 'title'，且不是Y轴，直接返回
+    if (field !== 'field' && field !== 'title' && !isYaxis) return
+
+    // 获取轴标签的实际内容
+    const realContent = e.target.attrs.text
+
+    // 如果标签长度小于限制或已经省略（以'...'结尾），则不显示 tooltip
+    if (
+      isYaxisTitle ? false : realContent.length < lengthLimit || !(realContent.slice(-3) === '...')
+    )
+      return
+
+    // 获取父节点中的 tooltip
+    const parentNode = e.event.target.parentNode
+    const labelTooltipDom = parentNode.getElementsByClassName('g2-axis-label-tooltip')[0]
+
+    // 如果 tooltip 存在，隐藏它
+    if (labelTooltipDom) labelTooltipDom.style.visibility = 'hidden'
+  })
+}
+
+/**
+ * y轴标题截取
+ * @param chart
+ * @param plot
+ */
+export function configYaxisTitleLengthLimit(chart, plot) {
+  // 监听图表渲染前事件
+  plot.on('beforerender', ev => {
+    // 获取图表的Y轴自定义样式
+    const { yAxis } = parseJson(chart.customStyle)
+
+    // 计算最大可用空间高度，80% 为最大高度比
+    const maxHeightRatio =
+      0.8 * (ev.view.canvas.cfg.height - (ev.view.canvas.cfg.height < 120 ? 60 : 30))
+
+    // 计算Y轴标题的每行高度
+    const titleHeight = measureText(
+      chart,
+      yAxis.name,
+      { fontSize: yAxis.fontSize, fontFamily: chart.fontFamily },
+      'height'
+    )
+
+    // 用于存储截取后的标题
+    let wrappedTitle = ''
+
+    // 循环截取标题内容，直到超过最大高度
+    for (
+      let charIndex = 0;
+      charIndex < yAxis.name.length && (charIndex + 1) * titleHeight <= maxHeightRatio;
+      charIndex++
+    ) {
+      wrappedTitle += yAxis.name[charIndex]
+    }
+
+    // 如果标题被截断，添加省略号
+    if (yAxis.name.length > wrappedTitle.length) {
+      wrappedTitle =
+        wrappedTitle.length > 2
+          ? wrappedTitle.slice(0, wrappedTitle.length - 2) + '...'
+          : wrappedTitle + '...'
+    }
+
+    // 更新Y轴标题的原始文本和截断后的文本
+    ev.view.options.axes.yAxisExt.title.originalText = yAxis.name
+    ev.view.options.axes.yAxisExt.title.text = wrappedTitle
+  })
+}

@@ -28,7 +28,7 @@ public interface TaskApi {
     @PostMapping("/update")
     void update(@RequestBody TaskInfoDTO jobInfo) throws DEException;
 
-    @DeleteMapping("/remove/{id}")
+    @PostMapping("/remove/{id}")
     void remove(@PathVariable(value = "id") String id) throws DEException;
 
     @GetMapping("start/{id}")

@@ -279,18 +279,23 @@ public class DatasetTableFieldManage {
     }
 
     public List<DatasetTableFieldDTO> transDTO(List<CoreDatasetTableField> list) {
-        return list.stream().map(ele -> {
-            DatasetTableFieldDTO dto = new DatasetTableFieldDTO();
-            if (ele == null) return null;
-            BeanUtils.copyBean(dto, ele);
-            if (StringUtils.isNotEmpty(ele.getParams())) {
-                TypeReference<List<CalParam>> tokenType = new TypeReference<>() {
-                };
-                List<CalParam> calParams = JsonUtil.parseList(ele.getParams(), tokenType);
-                dto.setParams(calParams);
-            }
-            return dto;
-        }).collect(Collectors.toList());
+        if(!CollectionUtils.isEmpty(list)){
+            return list.stream().map(ele -> {
+                DatasetTableFieldDTO dto = new DatasetTableFieldDTO();
+                if (ele == null) return null;
+                BeanUtils.copyBean(dto, ele);
+                if (StringUtils.isNotEmpty(ele.getParams())) {
+                    TypeReference<List<CalParam>> tokenType = new TypeReference<>() {
+                    };
+                    List<CalParam> calParams = JsonUtil.parseList(ele.getParams(), tokenType);
+                    dto.setParams(calParams);
+                }
+                return dto;
+            }).collect(Collectors.toList());
+        }else{
+            return new ArrayList<>();
+        }
+
     }
 
     private CoreDatasetTableField transDTO2Record(DatasetTableFieldDTO dto) {

@@ -16,6 +16,7 @@ import io.dataease.dataset.utils.FieldUtils;
 import io.dataease.dataset.utils.TableUtils;
 import io.dataease.datasource.dao.auto.entity.CoreDatasource;
 import io.dataease.datasource.dao.auto.mapper.CoreDatasourceMapper;
+import io.dataease.datasource.manage.DataSourceManage;
 import io.dataease.datasource.manage.EngineManage;
 import io.dataease.datasource.utils.DatasourceUtils;
 import io.dataease.engine.constant.ExtFieldConstant;
@@ -80,6 +81,9 @@ public class DatasetDataManage {
     @Resource
     private CorePermissionManage corePermissionManage;
 
+    @Resource
+    private DataSourceManage dataSourceManage;
+
     private static Logger logger = LoggerFactory.getLogger(DatasetDataManage.class);
 
     public static final List<String> notFullDs = List.of("mysql", "mariadb", "Excel", "API");
@@ -90,7 +94,7 @@ public class DatasetDataManage {
         String type = datasetTableDTO.getType();
         DatasetTableInfoDTO tableInfoDTO = JsonUtil.parseObject(datasetTableDTO.getInfo(), DatasetTableInfoDTO.class);
         if (StringUtils.equalsIgnoreCase(type, DatasetTableType.DB) || StringUtils.equalsIgnoreCase(type, DatasetTableType.SQL)) {
-            CoreDatasource coreDatasource = coreDatasourceMapper.selectById(datasetTableDTO.getDatasourceId());
+            CoreDatasource coreDatasource = dataSourceManage.getCoreDatasource(datasetTableDTO.getDatasourceId());
             DatasourceSchemaDTO datasourceSchemaDTO = new DatasourceSchemaDTO();
             if (StringUtils.equalsIgnoreCase("excel", coreDatasource.getType()) || StringUtils.equalsIgnoreCase("api", coreDatasource.getType())) {
                 coreDatasource = engineManage.getDeEngine();
@@ -113,8 +117,9 @@ public class DatasetDataManage {
                 sql = provider.transSqlDialect(sql, datasourceRequest.getDsList());
             } else {
                 // parser sql params and replace default value
-                String originSql = provider.replaceComment(new String(Base64.getDecoder().decode(tableInfoDTO.getSql())));
-                originSql = SqlparserUtils.handleVariableDefaultValue(originSql, datasetTableDTO.getSqlVariableDetails(), false, false, null, false, datasourceRequest.getDsList(), pluginManage);
+                String s = new String(Base64.getDecoder().decode(tableInfoDTO.getSql()));
+                String originSql = SqlparserUtils.handleVariableDefaultValue(s, datasetTableDTO.getSqlVariableDetails(), false, false, null, false, datasourceRequest.getDsList(), pluginManage);
+                originSql = provider.replaceComment(originSql);
                 // add sql table schema
 
                 sql = SQLUtils.buildOriginPreviewSql(SqlPlaceholderConstants.TABLE_PLACEHOLDER, 0, 0);
@@ -132,7 +137,7 @@ public class DatasetDataManage {
 
             tableFields = provider.fetchTableField(datasourceRequest);
         } else if (StringUtils.equalsIgnoreCase(type, DatasetTableType.Es)) {
-            CoreDatasource coreDatasource = coreDatasourceMapper.selectById(datasetTableDTO.getDatasourceId());
+            CoreDatasource coreDatasource = dataSourceManage.getCoreDatasource(datasetTableDTO.getDatasourceId());
             Provider provider = ProviderFactory.getProvider(type);
             DatasourceRequest datasourceRequest = new DatasourceRequest();
             DatasourceSchemaDTO datasourceSchemaDTO = new DatasourceSchemaDTO();
@@ -380,7 +385,7 @@ public class DatasetDataManage {
     }
 
     public Map<String, Object> previewSql(PreviewSqlDTO dto) throws DEException {
-        CoreDatasource coreDatasource = coreDatasourceMapper.selectById(dto.getDatasourceId());
+        CoreDatasource coreDatasource = dataSourceManage.getCoreDatasource(dto.getDatasourceId());
         DatasourceSchemaDTO datasourceSchemaDTO = new DatasourceSchemaDTO();
         if (coreDatasource.getType().equalsIgnoreCase("API") || coreDatasource.getType().equalsIgnoreCase("Excel")) {
             BeanUtils.copyBean(datasourceSchemaDTO, engineManage.getDeEngine());
@@ -403,8 +408,9 @@ public class DatasetDataManage {
 
         // parser sql params and replace default value
 
-        String originSql = provider.replaceComment(new String(Base64.getDecoder().decode(dto.getSql())));
-        originSql = SqlparserUtils.handleVariableDefaultValue(datasetSQLManage.subPrefixSuffixChar(originSql), dto.getSqlVariableDetails(), true, true, null, false, dsMap, pluginManage);
+        String s = new String(Base64.getDecoder().decode(dto.getSql()));
+        String originSql = SqlparserUtils.handleVariableDefaultValue(datasetSQLManage.subPrefixSuffixChar(s), dto.getSqlVariableDetails(), true, true, null, false, dsMap, pluginManage);
+        originSql = provider.replaceComment(originSql);
 
         // sql 作为临时表，外层加上limit
         String sql;
@@ -423,7 +429,7 @@ public class DatasetDataManage {
             if (ObjectUtils.isEmpty(list)) {
                 return null;
             }
-            sql = SQLUtils.buildOriginPreviewSqlWithOrderBy(SqlPlaceholderConstants.TABLE_PLACEHOLDER, 100, 0, String.format(SQLConstants.FIELD_DOT, list.get(0).getOriginName()) + " ASC ");
+            sql = SQLUtils.buildOriginPreviewSqlWithOrderBy(SqlPlaceholderConstants.TABLE_PLACEHOLDER, 100, 0, String.format(SQLConstants.FIELD_DOT_FIX, list.get(0).getOriginName()) + " ASC ");
         } else {
             sql = SQLUtils.buildOriginPreviewSql(SqlPlaceholderConstants.TABLE_PLACEHOLDER, 100, 0);
         }
@@ -613,6 +619,14 @@ public class DatasetDataManage {
             if (ObjectUtils.isNotEmpty(dataList)) {
                 List<String> tmpData = dataList.stream().map(ele -> (ObjectUtils.isNotEmpty(ele) && ele.length > 0) ? ele[0] : null).collect(Collectors.toList());
                 if (!CollectionUtils.isEmpty(tmpData)) {
+                    for (int i = 0; i < tmpData.size(); i++) {
+                        String val = tmpData.get(i);
+                        if (field.getDeType() == 3 && StringUtils.containsIgnoreCase(val, "E")) {
+                            BigDecimal bigDecimal = new BigDecimal(val);
+                            val = String.format("%.8f", bigDecimal);
+                            tmpData.set(i, val);
+                        }
+                    }
                     if (desensitizationList.keySet().contains(field.getDataeaseName())) {
                         for (int i = 0; i < tmpData.size(); i++) {
                             previewData.add(ChartDataBuild.desensitizationValue(desensitizationList.get(field.getDataeaseName()), tmpData.get(i)));
@@ -883,6 +897,10 @@ public class DatasetDataManage {
                 for (int i = 0; i < fields.size(); i++) {
                     String val = ele[i];
                     DatasetTableFieldDTO field = fields.get(i);
+                    if (field.getDeType() == 3 && StringUtils.containsIgnoreCase(val, "E")) {
+                        BigDecimal bigDecimal = new BigDecimal(val);
+                        val = String.format("%.8f", bigDecimal);
+                    }
                     if (desensitizationList.containsKey(field.getDataeaseName())) {
                         String str = ChartDataBuild.desensitizationValue(desensitizationList.get(field.getDataeaseName()), val);
                         map.put(field.getId() + "", str);

@@ -29,7 +29,7 @@ export const customAttrTrans = {
 export const customStyleTrans = {
   text: ['fontSize'],
   legend: {
-    textStyle: ['fontSize']
+    textStyle: ['fontSize', 'size']
   },
   xAxis: {
     nameTextStyle: ['fontSize'],

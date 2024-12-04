@@ -149,7 +149,7 @@ const showProperties = (prop: EditorProperty) => {
 
 const linkJumpSetOpen = () => {
   if (!dvInfo.value.id) {
-    ElMessage.warning('请先保存当前页面')
+    ElMessage.warning(t('visualization.save_page_tips'))
     return
   }
   //跳转设置需要先触发保存
@@ -159,7 +159,7 @@ const linkJumpSetOpen = () => {
 }
 const linkageSetOpen = () => {
   if (!dvInfo.value.id) {
-    ElMessage.warning('请先保存当前页面')
+    ElMessage.warning(t('visualization.save_page_tips'))
     return
   }
   //跳转设置需要先触发保存
@@ -328,16 +328,18 @@ const removeJumpSenior = () => {
             v-if="showProperties('linkage')"
             :themes="themes"
             name="linkage"
-            :title="'联动设置'"
+            :title="t('visualization.linkage_setting')"
             v-model="chart.linkageActive"
             @modelChange="linkageActiveChange"
           >
             <div class="inner-container">
-              <span class="label" :class="'label-' + props.themes">联动设置</span>
+              <span class="label" :class="'label-' + props.themes">{{
+                t('visualization.linkage_setting')
+              }}</span>
               <span class="right-btns">
                 <template v-if="seniorCounts.linkageCount > 0">
                   <span class="set-text-info" :class="{ 'set-text-info-dark': themes === 'dark' }">
-                    已设置
+                    {{ t('visualization.already_setting') }}
                   </span>
                   <button
                     :class="'label-' + props.themes"
@@ -377,16 +379,18 @@ const removeJumpSenior = () => {
             v-if="showProperties('jump-set') && !isDataEaseBi"
             :themes="themes"
             name="jumpSet"
-            :title="'跳转设置'"
+            :title="t('visualization.jump_set')"
             v-model="chart.jumpActive"
             @modelChange="linkJumpActiveChange"
           >
             <div class="inner-container">
-              <span class="label" :class="'label-' + props.themes">跳转设置</span>
+              <span class="label" :class="'label-' + props.themes">{{
+                t('visualization.jump_set')
+              }}</span>
               <span class="right-btns">
                 <template v-if="seniorCounts.jumpCount">
                   <span class="set-text-info" :class="{ 'set-text-info-dark': themes === 'dark' }">
-                    已设置
+                    {{ t('visualization.already_setting') }}
                   </span>
                   <button
                     :class="'label-' + props.themes"
@@ -424,7 +428,7 @@ const removeJumpSenior = () => {
           </collapse-switch-item>
           <collapse-switch-item
             :effect="themes"
-            title="气泡动效"
+            :title="t('visualization.bubble_dynamic_effect')"
             :change-model="chart.senior.bubbleCfg"
             v-if="showProperties('bubble-animate')"
             v-model="chart.senior.bubbleCfg.enable"

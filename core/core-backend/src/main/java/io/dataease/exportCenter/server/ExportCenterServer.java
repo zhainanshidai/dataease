@@ -1,8 +1,9 @@
 package io.dataease.exportCenter.server;
 
 import io.dataease.api.exportCenter.ExportCenterApi;
-import io.dataease.model.ExportTaskDTO;
 import io.dataease.exportCenter.manage.ExportCenterManage;
+import io.dataease.exportCenter.util.ExportCenterUtils;
+import io.dataease.model.ExportTaskDTO;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +50,6 @@ public class ExportCenterServer implements ExportCenterApi {
     }
 
     public String exportLimit() {
-        return exportCenterManage.exportLimit();
+        return String.valueOf(ExportCenterUtils.getExportLimit("dataset"));
     }
 }

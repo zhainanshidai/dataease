@@ -3,7 +3,7 @@
     ref="canvasCacheDialogRef"
     :append-to-body="true"
     v-model="dialogShow"
-    width="340px"
+    width="360px"
     :show-close="false"
     trigger="click"
   >
@@ -21,8 +21,10 @@
     </el-row>
     <template #footer>
       <div class="dialog-footer">
-        <el-button size="mini" @click="doUseCache(false)">否 </el-button>
-        <el-button type="primary" size="mini" @click="doUseCache(true)">是 </el-button>
+        <el-button size="mini" @click="doUseCache(false)">{{ t('visualization.yes') }} </el-button>
+        <el-button type="primary" size="mini" @click="doUseCache(true)">{{
+          t('visualization.no')
+        }}</el-button>
       </div>
     </template>
   </el-dialog>
@@ -50,8 +52,8 @@ const dialogInit = initInfo => {
   const canvasTypeName =
     initInfo.canvasType === 'dataV' ? t('work_branch.big_data_screen') : t('work_branch.dashboard')
   dialogInfo.resourceId = initInfo.resourceId
-  dialogInfo.title = '存在未保存的' + canvasTypeName
-  dialogInfo.tips = canvasTypeName + '存在未保存的修改，立即恢复？'
+  dialogInfo.title = t('visualization.no_save_tips', [canvasTypeName])
+  dialogInfo.tips = t('visualization.no_save_tips2')
   dialogShow.value = true
 }
 

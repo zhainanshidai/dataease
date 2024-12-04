@@ -23,7 +23,7 @@ const dvMainStore = dvMainStoreWithOut()
 const { dvInfo, mobileInPc } = storeToRefs(dvMainStore)
 
 const tips =
-  '从顶部工具栏中选择组件，添加到这里创建' +
+  t('visualization.resource_create_tips') +
   (dvInfo.value.type === 'dashboard'
     ? t('work_branch.dashboard')
     : t('work_branch.big_data_screen'))

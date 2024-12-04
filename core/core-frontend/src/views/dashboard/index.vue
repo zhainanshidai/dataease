@@ -31,6 +31,7 @@ const interactiveStore = interactiveStoreWithOut()
 import { useRequestStoreWithOut } from '@/store/modules/request'
 import { usePermissionStoreWithOut } from '@/store/modules/permission'
 import eventBus from '@/utils/eventBus'
+import { useI18n } from '@/hooks/web/useI18n'
 const embeddedStore = useEmbedded()
 const { wsCache } = useCache()
 const canvasCacheOutRef = ref(null)
@@ -60,6 +61,7 @@ const {
 const dataInitState = ref(false)
 const appStore = useAppStoreWithOut()
 const isDataEaseBi = computed(() => appStore.getIsDataEaseBi)
+const { t } = useI18n()
 
 const state = reactive({
   datasetTree: [],
@@ -86,7 +88,9 @@ const otherEditorShow = computed(() => {
 })
 
 const otherEditorTitle = computed(() => {
-  return curComponent.value?.component === 'UserView' ? '属性' : curComponent.value?.label || '属性'
+  return curComponent.value?.component === 'UserView'
+    ? t('visualization.attribute')
+    : curComponent.value?.label || t('visualization.attribute')
 })
 
 const viewEditorShow = computed(() => {
@@ -165,6 +169,7 @@ const initLocalCanvasData = () => {
   })
 }
 onMounted(async () => {
+  snapshotStore.initSnapShot()
   if (window.location.hash.includes('#/dashboard')) {
     newWindowFromDiv.value = true
   }
@@ -273,6 +278,7 @@ onUnmounted(() => {
           :component-data="componentData"
           :canvas-style-data="canvasStyleData"
           :canvas-view-info="canvasViewInfo"
+          :font-family="canvasStyleData.fontFamily"
         ></de-canvas>
       </main>
       <!-- 右侧侧组件列表 -->
@@ -284,6 +290,7 @@ onUnmounted(() => {
         :side-name="'componentProp'"
         :aside-position="'right'"
         :view="canvasViewInfo[curComponent.id]"
+        :element="curComponent"
         class="left-sidebar"
       >
         <component :is="findComponentAttr(curComponent)" :themes="'light'" />
@@ -291,7 +298,7 @@ onUnmounted(() => {
       <dv-sidebar
         v-show="!curComponent && !batchOptStatus"
         :theme-info="'light'"
-        title="仪表板配置"
+        :title="t('visualization.dashboard_configuration')"
         :width="420"
         aside-position="right"
         class="left-sidebar"
@@ -308,7 +315,7 @@ onUnmounted(() => {
       <dv-sidebar
         v-if="batchOptStatus"
         :theme-info="'light'"
-        title="批量设置样式"
+        :title="t('visualization.batch_style_set')"
         :width="280"
         aside-position="right"
         class="left-sidebar"

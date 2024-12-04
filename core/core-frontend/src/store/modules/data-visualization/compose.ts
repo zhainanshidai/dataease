@@ -30,6 +30,7 @@ export const composeStore = defineStore('compose', {
       },
       editorMap: {},
       isCtrlOrCmdDown: false,
+      isSpaceDown: false,
       isShiftDown: false,
       laterIndex: null, //最后点击组件的索引
       editor: null
@@ -42,6 +43,10 @@ export const composeStore = defineStore('compose', {
 
     setLaterIndex(value) {
       this.laterIndex = value
+    },
+    setSpaceDownStatus(value) {
+      this.isSpaceDown = value
+      console.log('====isSpaceDown=' + this.isSpaceDown)
     },
     setIsCtrlOrCmdDownStatus(value) {
       this.isCtrlOrCmdDown = value

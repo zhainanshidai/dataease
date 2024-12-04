@@ -249,7 +249,7 @@ onMounted(() => {
           maxlength="20"
           v-model="state.tableTotalForm.row.label"
           clearable
-          @blur="changeTableTotal('row.label')"
+          @change="changeTableTotal('row.label')"
         />
       </el-form-item>
       <el-form-item
@@ -389,7 +389,7 @@ onMounted(() => {
           size="small"
           maxlength="20"
           clearable
-          @blur="changeTableTotal"
+          @change="changeTableTotal('row.subLabel')"
         />
       </el-form-item>
       <el-form-item
@@ -498,7 +498,7 @@ onMounted(() => {
           maxlength="20"
           v-model="state.tableTotalForm.col.label"
           clearable
-          @blur="changeTableTotal('col')"
+          @blur="changeTableTotal('col.label')"
         />
       </el-form-item>
       <el-form-item
@@ -637,7 +637,7 @@ onMounted(() => {
           size="small"
           maxlength="20"
           clearable
-          @change="changeTableTotal('col')"
+          @change="changeTableTotal('col.subLabel')"
         />
       </el-form-item>
       <el-form-item

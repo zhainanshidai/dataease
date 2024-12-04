@@ -16,8 +16,10 @@ import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { getCanvasStyle } from '@/utils/style'
 import EmptyBackground from '../../components/empty-background/src/EmptyBackground.vue'
 import { iconChartMap } from '@/components/icon-group/chart-list'
+import { useI18n } from '@/hooks/web/useI18n'
 const dvMainStore = dvMainStoreWithOut()
 const viewShow = ref(true)
+const { t } = useI18n()
 
 const props = defineProps({
   canvasStyleData: {
@@ -158,16 +160,17 @@ onBeforeMount(() => {
   <el-row class="preview">
     <el-col :span="6" style="height: 100%; overflow-y: auto">
       <el-row class="tree-head">
-        <span class="head-text">选择组件</span>
+        <span class="head-text">{{ t('visualization.to_select_view') }}</span>
         <span class="head-filter"
-          >仅看已选 <el-switch size="small" v-model="state.showSelected" />
+          >{{ t('visualization.show_selected_only') }}
+          <el-switch size="small" v-model="state.showSelected" />
         </span>
       </el-row>
       <el-tree
         class="custom-tree-multiplex"
         menu
         ref="multiplexInfoTree"
-        :empty-text="'暂无可用组件'"
+        :empty-text="t('visualization.no_available_component')"
         :filter-node-method="filterNodeMethod"
         :data="curMultiplexTargetComponentsInfo"
         node-key="targetViewId"
@@ -213,9 +216,14 @@ onBeforeMount(() => {
             :config="state.multiplexInfo"
             :canvas-style-data="canvasStyleData"
             :dv-info="dvInfo"
+            :show-position="'canvas-multiplexing'"
             :canvas-view-info="canvasViewInfo"
           />
-          <empty-background v-else description="当前未选择组件" img-type="select" />
+          <empty-background
+            v-else
+            :description="t('visualization.no_selected_component')"
+            img-type="select"
+          />
         </div>
       </div>
     </el-col>

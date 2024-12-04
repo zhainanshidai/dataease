@@ -1,6 +1,6 @@
 <template>
   <el-drawer
-    :title="'保存应用'"
+    :title="t('visualization.save_app')"
     v-model="state.appApplyDrawer"
     custom-class="de-app-drawer"
     :show-close="false"
@@ -19,12 +19,16 @@
         label-position="top"
       >
         <div class="de-row-rules" style="margin: 0 0 16px">
-          <span>基本信息</span>
+          <span>{{ t('visualization.base_info') }}</span>
         </div>
-        <el-form-item :label="dvPreName + '名称'" prop="name">
-          <el-input v-model="state.form.name" autocomplete="off" :placeholder="'请输入名称'" />
+        <el-form-item :label="dvPreName + t('visualization.name')" prop="name">
+          <el-input
+            v-model="state.form.name"
+            autocomplete="off"
+            :placeholder="t('visualization.input_tips')"
+          />
         </el-form-item>
-        <el-form-item :label="dvPreName + '所在位置'" prop="pid">
+        <el-form-item :label="dvPreName + t('visualization.position')" prop="pid">
           <el-tree-select
             style="width: 100%"
             @keydown.stop
@@ -33,7 +37,6 @@
             :data="state.dvTree"
             :props="state.propsTree"
             @node-click="dvTreeSelect"
-            :filter-method="dvTreeFilterMethod"
             :render-after-expand="false"
             filterable
           >
@@ -47,14 +50,14 @@
             </template>
           </el-tree-select>
         </el-form-item>
-        <el-form-item :label="'数据集分组名称'" prop="datasetFolderName">
+        <el-form-item :label="t('visualization.ds_group_name')" prop="datasetFolderName">
           <el-input
             v-model="state.form.datasetFolderName"
             autocomplete="off"
-            :placeholder="'请输入名称'"
+            :placeholder="t('visualization.input_tips')"
           />
         </el-form-item>
-        <el-form-item label="数据集分组位置" prop="datasetFolderPid">
+        <el-form-item :label="t('visualization.ds_group_position')" prop="datasetFolderPid">
           <el-tree-select
             style="width: 100%"
             @keydown.stop
@@ -78,12 +81,13 @@
           </el-tree-select>
         </el-form-item>
         <div class="de-row-rules" style="margin: 0 0 16px">
-          <span>数据源信息</span>
+          <span>{{ t('visualization.datasource_info') }}</span>
         </div>
         <el-row class="datasource-link">
           <el-row class="head">
-            <el-col :span="11">应用数据源</el-col><el-col :span="2"></el-col
-            ><el-col :span="11">系统数据源</el-col>
+            <el-col :span="11">{{ t('visualization.app_datasource') }}</el-col
+            ><el-col :span="2"></el-col
+            ><el-col :span="11">{{ t('visualization.sys_datasource') }}</el-col>
           </el-row>
           <el-row
             :key="index"
@@ -148,6 +152,9 @@ import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { storeToRefs } from 'pinia'
 import { deepCopy } from '@/utils/utils'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
+import { useCache } from '@/hooks/web/useCache'
+
+const { wsCache } = useCache('localStorage')
 const { t } = useI18n()
 const emits = defineEmits(['closeDraw', 'saveAppCanvas'])
 const appSaveForm = ref(null)
@@ -182,8 +189,9 @@ const dvPreName = computed(() =>
 )
 const addDsWindow = () => {
   // do addDsWindow
+  const openType = wsCache.get('open-backend') === '1' ? '_self' : '_blank'
   const url = '#/data/datasource?opt=create'
-  window.open(url, '_blank')
+  window.open(url, openType)
 }
 
 const state = reactive({
@@ -200,7 +208,7 @@ const state = reactive({
   },
   form: {
     pid: '',
-    name: '新建',
+    name: t('visualization.new'),
     datasetFolderPid: null,
     datasetFolderName: null
   },
@@ -217,7 +225,7 @@ const state = reactive({
     pid: [
       {
         required: true,
-        message: '请选择所属文件夹',
+        message: t('visualization.select_folder'),
         trigger: 'blur'
       }
     ],
@@ -233,7 +241,7 @@ const state = reactive({
     datasetFolderPid: [
       {
         required: true,
-        message: '请选择数据集分组所属文件夹',
+        message: t('visualization.select_ds_group_folder'),
         trigger: 'blur'
       }
     ]
@@ -259,7 +267,7 @@ const initData = () => {
     dfs(res as unknown as BusiTreeNode[])
     state.dsTree = (res as unknown as BusiTreeNode[]) || []
     if (state.dsTree.length && state.dsTree[0].name === 'root' && state.dsTree[0].id === '0') {
-      state.dsTree[0].name = '数据集'
+      state.dsTree[0].name = t('visualization.dataset')
     }
   })
 }
@@ -278,14 +286,6 @@ const init = params => {
   state.form = params.base
   state.appData.datasourceInfo = deepCopy(appData.value?.datasourceInfo)
   initData()
-}
-
-const dvTreeFilterMethod = value => {
-  state.dvTree = [...state.dvTree].filter(item => item.name.includes(value))
-}
-
-const dsTreeFilterMethod = value => {
-  state.dsTree = [...state.dsTree].filter(item => item.name.includes(value))
 }
 
 const dvTreeSelect = element => {
@@ -310,7 +310,7 @@ const saveApp = () => {
     }
   })
   if (!datasourceMatchReady) {
-    ElMessage.error('存在未配置的数据源')
+    ElMessage.error(t('visualization.app_no_datasource_tips'))
     return
   }
   appSaveForm.value?.validate(valid => {

@@ -49,6 +49,8 @@ public class SQLConstants {
 
     public static final String FIELD_DOT = "%s";
 
+    public static final String FIELD_DOT_FIX = "`%s`";
+
     public static final String UNIX_TIMESTAMP = "DE_UNIX_TIMESTAMP(%s)";
 
     public static final String DE_DATE_FORMAT = "DE_DATE_FORMAT(%s,'%s')";

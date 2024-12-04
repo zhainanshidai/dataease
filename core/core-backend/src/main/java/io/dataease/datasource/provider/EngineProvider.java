@@ -2,6 +2,7 @@ package io.dataease.datasource.provider;
 
 import io.dataease.datasource.dao.auto.entity.CoreDeEngine;
 import io.dataease.datasource.request.EngineRequest;
+import io.dataease.datasource.server.DatasourceServer;
 import io.dataease.extensions.datasource.dto.TableField;
 
 import java.util.List;
@@ -21,7 +22,7 @@ public abstract class EngineProvider {
 
     public abstract String createTableSql(String name, List<TableField> tableFields, CoreDeEngine engine);
 
-    public abstract String insertSql(String name, List<String[]> dataList, int page, int pageNumber);
+    public abstract String insertSql(String tableName, DatasourceServer.UpdateType extractType, List<String[]> dataList, int page, int pageNumber, List<TableField> tableFields);
 
 
 }

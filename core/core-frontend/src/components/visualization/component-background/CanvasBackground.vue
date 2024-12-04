@@ -21,7 +21,7 @@
           v-model="dvInfo.selfWatermarkStatus"
           @change="onBackgroundChange"
         >
-          水印
+          {{ t('visualization.watermark') }}}
         </el-checkbox>
       </el-form-item>
       <el-form-item class="form-item no-margin-bottom" :class="'form-item-' + themes">
@@ -31,7 +31,7 @@
           v-model="canvasStyleData.backgroundColorSelect"
           @change="onBackgroundChange"
         >
-          {{ $t('chart.color') }}
+          {{ t('chart.color') }}
         </el-checkbox>
       </el-form-item>
 
@@ -94,7 +94,7 @@
                 class="image-hint"
                 :class="`image-hint_${themes}`"
               >
-                支持JPG、PNG、GIF、SVG
+                {{ t('visualization.pic_upload_tips2') }}
               </span>
               <el-button
                 size="small"
@@ -104,7 +104,7 @@
                 @click="goFile"
                 :disabled="!canvasStyleData.backgroundImageEnable"
               >
-                重新上传
+                {{ t('visualization.re_upload') }}
               </el-button>
             </el-row>
           </div>
@@ -168,7 +168,7 @@ const goFile = () => {
 }
 
 const sizeMessage = () => {
-  ElMessage.success('图片大小不符合')
+  ElMessage.success(t('visualization.pic_size_error'))
 }
 
 const reUpload = e => {

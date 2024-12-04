@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
-import { nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import DePreview from '@/components/data-visualization/canvas/DePreview.vue'
 import router from '@/router'
 import { useEmitt } from '@/hooks/web/useEmitt'
@@ -16,6 +16,8 @@ import { propTypes } from '@/utils/propTypes'
 import { downloadCanvas2 } from '@/utils/imgUtils'
 import { setTitle } from '@/utils/utils'
 import EmptyBackground from '../../components/empty-background/src/EmptyBackground.vue'
+import { useRoute } from 'vue-router'
+const routeWatch = useRoute()
 
 const dvMainStore = dvMainStoreWithOut()
 const { t } = useI18n()
@@ -151,14 +153,23 @@ const downloadH2 = type => {
     })
   })
 }
+// 监听路由变化
+// 监听路由变化
+watch(
+  () => ({ path: routeWatch.path, params: routeWatch.params }),
+  () => {
+    location.reload() // 重新加载浏览器页面
+  },
+  { deep: true }
+)
 
 let p = null
 const XpackLoaded = () => p(true)
 onMounted(async () => {
   useEmitt({
     name: 'canvasDownload',
-    callback: function () {
-      downloadH2('img')
+    callback: function (type = 'img') {
+      downloadH2(type)
     }
   })
   await new Promise(r => (p = r))
@@ -177,13 +188,17 @@ onMounted(async () => {
   dvMainStore.setPublicLinkStatus(props.publicLinkStatus)
 })
 
+const dataVKeepSize = computed(() => {
+  return state.canvasStylePreview?.screenAdaptor === 'keep'
+})
+
 defineExpose({
   loadCanvasDataAsync
 })
 </script>
 
 <template>
-  <div class="content" ref="previewCanvasContainer">
+  <div class="content" :class="{ 'canvas_keep-size': dataVKeepSize }" ref="previewCanvasContainer">
     <de-preview
       ref="dvPreview"
       v-if="state.canvasStylePreview && state.initState"
@@ -196,7 +211,11 @@ defineExpose({
       :download-status="downloadStatus"
       :show-pop-bar="true"
     ></de-preview>
-    <empty-background v-if="!state.initState" description="参数不能为空" img-type="noneWhite" />
+    <empty-background
+      v-if="!state.initState"
+      :description="t('visualization.no_params_tips')"
+      img-type="noneWhite"
+    />
   </div>
   <XpackComponent
     jsname="L2NvbXBvbmVudC9lbWJlZGRlZC1pZnJhbWUvTmV3V2luZG93SGFuZGxlcg=="

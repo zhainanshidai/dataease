@@ -12,7 +12,7 @@
         <el-button type="primary" @click="edit">{{ t('commons.edit') }}</el-button>
       </div>
     </div>
-    <div class="info-template-content">
+    <div class="info-template-content clearfix">
       <div class="info-content-item" v-for="item in settingList" :key="item.pkey">
         <div class="info-item-label">
           <span>{{ t(item.pkey) }}</span>
@@ -222,7 +222,9 @@ formatLabel()
   }
 }
 .info-template-container {
-  padding: 24px;
+  padding: 24px 24px 0;
+  background: var(--ContentBG, #ffffff);
+  border-radius: 4px;
   .info-template-header {
     display: flex;
     margin-top: -4px;
@@ -285,6 +287,11 @@ formatLabel()
         }
       }
     }
+  }
+  .clearfix::after {
+    content: '';
+    display: table;
+    clear: both;
   }
 }
 </style>

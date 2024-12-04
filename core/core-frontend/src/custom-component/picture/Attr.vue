@@ -124,7 +124,12 @@ onBeforeUnmount(() => {
       :background-color-picker-width="197"
       :background-border-select-width="197"
     >
-      <el-collapse-item :effect="themes" title="图片" name="picture" v-show="!mobileInPc">
+      <el-collapse-item
+        :effect="themes"
+        :title="t('visualization.picture')"
+        name="picture"
+        v-show="!mobileInPc"
+      >
         <el-row class="img-area" :class="`img-area_${themes}`">
           <el-col style="width: 130px !important">
             <el-upload
@@ -152,7 +157,7 @@ onBeforeUnmount(() => {
             class="image-hint"
             :class="`image-hint_${themes}`"
           >
-            支持JPG、PNG、GIF、SVG
+            {{ t('visualization.pic_upload_tips2') }}
           </span>
 
           <el-button
@@ -162,14 +167,14 @@ onBeforeUnmount(() => {
             text
             @click="goFile"
           >
-            重新上传
+            {{ t('visualization.re_upload') }}
           </el-button>
         </el-row>
         <el-row class="pic-adaptor">
           <el-form-item
             v-if="curComponent.style.adaptation"
             class="form-item"
-            label="图片适应方式"
+            :label="t('visualization.pic_adaptor_type')"
             size="small"
             :effect="themes"
             :class="'form-item-' + themes"
@@ -180,9 +185,15 @@ onBeforeUnmount(() => {
               @change="onStyleChange"
               :effect="themes"
             >
-              <el-radio label="adaptation" :effect="themes">适应组件</el-radio>
-              <el-radio label="original" :effect="themes">原始尺寸</el-radio>
-              <el-radio label="equiratio" :effect="themes">等比适应</el-radio>
+              <el-radio label="adaptation" :effect="themes">{{
+                t('visualization.pic_adaptation')
+              }}</el-radio>
+              <el-radio label="original" :effect="themes">{{
+                t('visualization.pic_original')
+              }}</el-radio>
+              <el-radio label="equiratio" :effect="themes">{{
+                t('visualization.pic_equiratio')
+              }}</el-radio>
             </el-radio-group>
           </el-form-item>
         </el-row>

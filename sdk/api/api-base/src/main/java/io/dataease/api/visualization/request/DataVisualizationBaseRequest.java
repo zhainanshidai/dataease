@@ -51,6 +51,12 @@ public class DataVisualizationBaseRequest extends DataVisualizationVO {
     // 数据集分组名称
     private String datasetFolderName;
 
+    //新赋值的content_id
+    private String newContentId;
+
+    // 是否强制校验新旧contentId
+    private Boolean checkHistory = false;
+
 
     public DataVisualizationBaseRequest(Long id,String busiFlag) {
         this.busiFlag = busiFlag;

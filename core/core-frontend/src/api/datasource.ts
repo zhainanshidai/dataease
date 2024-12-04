@@ -155,6 +155,8 @@ export const getById = (id: number) => request.get({ url: '/datasource/get/' + i
 
 export const getHidePwById = (id: number) => request.get({ url: '/datasource/hidePw/' + id })
 
+export const getSimpleDs = (id: number) => request.get({ url: '/datasource/getSimpleDs/' + id })
+
 export const uploadFile = async (data): Promise<IResponse> => {
   return request
     .post({

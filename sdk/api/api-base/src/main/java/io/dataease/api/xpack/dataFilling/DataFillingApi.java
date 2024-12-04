@@ -12,6 +12,7 @@ import io.dataease.extensions.datasource.dto.SimpleDatasourceDTO;
 import io.dataease.model.BusiNodeRequest;
 import io.dataease.model.BusiNodeVO;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -109,6 +110,9 @@ public interface DataFillingApi {
     @PostMapping("/user-task/page/{goPage}/{pageSize}")
     IPage<DfUserTaskVo> listUserTask(@PathVariable("goPage") int goPage, @PathVariable("pageSize") int pageSize, @RequestBody DfUserTaskRequest request) throws Exception;
 
+    @PostMapping("/user-task/todo/count")
+    long countUserTodoList() throws Exception;
+
     @GetMapping("/user-task/list/{id}")
     DfUserTaskData listUserTaskData(@PathVariable("id") Long id) throws Exception;
 
@@ -139,6 +143,6 @@ public interface DataFillingApi {
 
     void geFullName(Long pid, List<String> fullName);
 
-    @PostMapping("/innerExport/{formId}")
-    void innerExport(@PathVariable("formId") Long formId) throws Exception;
+    @PostMapping("/innerExport/{isDataEaseBi}/{formId}")
+    void innerExport(@PathVariable("formId") Long formId, @PathVariable("isDataEaseBi") boolean isDataEaseBi, HttpServletResponse response) throws Exception;
 }

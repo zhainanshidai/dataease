@@ -8,12 +8,13 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
 import { changeSizeWithScale } from '@/utils/changeComponentsSizeWithScale'
 import { useEmitt } from '@/hooks/web/useEmitt'
+import { useI18n } from '@/hooks/web/useI18n'
 const dvMainStore = dvMainStoreWithOut()
 const { canvasStyleData, editMode } = storeToRefs(dvMainStore)
 const snapshotStore = snapshotStoreWithOut()
 const scale = ref(60)
 const scaleChangeReady = ref(true)
-
+const { t } = useI18n()
 const handleScaleChange = () => {
   if (scaleChangeReady.value) {
     scaleChangeReady.value = false
@@ -148,7 +149,7 @@ onUnmounted(() => {
         <Icon name="dv-max"><dvMax class="svg-icon"></dvMax></Icon
       ></el-icon>
       <el-divider direction="vertical" class="custom-divider_scale" />
-      <el-tooltip effect="ndark" content="定位到中心点" placement="top">
+      <el-tooltip effect="ndark" :content="t('visualization.locate_tips')" placement="top">
         <el-icon @click="reposition" class="hover-icon-custom" style="margin-right: 12px">
           <Icon name="dv-reposition"><dvReposition class="svg-icon"></dvReposition></Icon
         ></el-icon>

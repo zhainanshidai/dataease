@@ -3,7 +3,7 @@ import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { onMounted, reactive } from 'vue'
 import DePreview from '@/components/data-visualization/canvas/DePreview.vue'
 import router from '@/router/mobile'
-import { initCanvasDataMobile } from '@/utils/canvasUtils'
+import { initCanvasDataMobile, initCanvasData } from '@/utils/canvasUtils'
 import { queryTargetVisualizationJumpInfo } from '@/api/visualization/linkJump'
 import { Base64 } from 'js-base64'
 import { getOuterParamsInfo } from '@/api/visualization/outerParams'
@@ -91,7 +91,9 @@ const loadCanvasDataAsync = async (dvId, dvType) => {
       return
     }
   }
-  initCanvasDataMobile(
+
+  const req = dvType === 'dashboard' ? initCanvasDataMobile : initCanvasData
+  req(
     dvId,
     dvType,
     function ({
@@ -101,7 +103,7 @@ const loadCanvasDataAsync = async (dvId, dvType) => {
       canvasViewInfoPreview,
       curPreviewGap
     }) {
-      if (!dvInfo.mobileLayout) {
+      if (!dvInfo.mobileLayout && dvType === 'dashboard') {
         router.push('/DashboardEmpty')
         return
       }
@@ -172,7 +174,11 @@ defineExpose({
       :is-selector="props.isSelector"
     ></de-preview>
   </div>
-  <empty-background v-if="!state.initState" description="参数不能为空" img-type="noneWhite" />
+  <empty-background
+    v-if="!state.initState"
+    :description="t('visualization.no_params_tips')"
+    img-type="noneWhite"
+  />
   <XpackComponent
     jsname="L2NvbXBvbmVudC9lbWJlZGRlZC1pZnJhbWUvTmV3V2luZG93SGFuZGxlcg=="
     @loaded="XpackLoaded"

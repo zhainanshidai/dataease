@@ -80,7 +80,15 @@ onMounted(async () => {
   }
   linkExist.value = true
   linkExp.value = !!proxyInfo.exp
+  if (!!proxyInfo.exp) {
+    loading.value = false
+    return
+  }
   pwdValid.value = !!proxyInfo.pwdValid
+  if (!pwdValid.value) {
+    loading.value = false
+    return
+  }
   state.ticketValidVO = proxyInfo.ticketValidVO
   nextTick(() => {
     const method = pcanvas?.value?.loadCanvasDataAsync

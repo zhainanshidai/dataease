@@ -2,7 +2,7 @@
   <el-dialog
     class="params-class"
     :append-to-body="true"
-    title="外部参数设置"
+    :title="t('visualization.outer_param_set')"
     v-model="state.outerParamsSetVisible"
     width="80vw"
     top="10vh"
@@ -13,7 +13,7 @@
         <el-row class="preview">
           <el-col :span="6" class="preview-left">
             <el-row class="tree-head">
-              <span class="head-text">参数列表</span>
+              <span class="head-text">{{ t('visualization.params_list') }}</span>
               <span class="head-filter">
                 <el-button type="primary" icon="Plus" text @click="addOuterParamsInfo"> </el-button>
               </span>
@@ -52,7 +52,9 @@
                       <span class="tree-select-field" v-else-if="data.paramName">
                         {{ data.paramName }}
                       </span>
-                      <span class="tree-select-field" v-else> 未配置参数名 </span>
+                      <span class="tree-select-field" v-else
+                        >{{ t('visualization.no_setting_params_name_tip') }}
+                      </span>
                     </span>
                     <span class="icon-more">
                       <handle-more
@@ -70,7 +72,9 @@
           </el-col>
           <el-col :span="13" class="preview-show">
             <el-row v-if="state.curNodeId">
-              <el-row class="new-params-title"> 选择参数关联组件 </el-row>
+              <el-row class="new-params-title">
+                {{ t('visualization.select_params_connect_component') }}
+              </el-row>
               <el-row class="new-params-filter" v-if="state.outerParamsInfo?.filterInfo?.length">
                 <div style="display: flex" class="inner-content">
                   <div style="width: 16px; margin-top: 2px" class="expand-custom-outer">
@@ -81,8 +85,8 @@
                       </el-icon>
                     </div>
                   </div>
-                  <div style="flex: 1">查询组件</div>
-                  <div style="flex: 1">关联条件</div>
+                  <div style="flex: 1">{{ t('visualization.filter_component') }}</div>
+                  <div style="flex: 1">{{ t('visualization.connection_condition') }}</div>
                 </div>
                 <div class="outer-filter-content">
                   <div
@@ -104,7 +108,7 @@
                         v-model="baseFilter.filterSelected"
                         filterable
                         style="width: 100%"
-                        placeholder="请选择查询条件"
+                        :placeholder="t('visualization.select_query_condition')"
                         clearable
                       >
                         <el-option
@@ -130,8 +134,8 @@
                       </el-icon>
                     </div>
                   </div>
-                  <div style="flex: 1">图表</div>
-                  <div style="flex: 1">关联字段或参数</div>
+                  <div style="flex: 1">{{ t('visualization.view') }}</div>
+                  <div style="flex: 1">{{ t('visualization.connection_params_fields') }}</div>
                 </div>
                 <div class="outer-dataset-content">
                   <div
@@ -173,8 +177,14 @@
                               class="params-select--header"
                               v-model="baseDatasetInfo.activelist"
                             >
-                              <el-tab-pane label="字段" name="dimensionList"></el-tab-pane>
-                              <el-tab-pane label="参数" name="parameterList"></el-tab-pane>
+                              <el-tab-pane
+                                :label="t('visualization.fields')"
+                                name="dimensionList"
+                              ></el-tab-pane>
+                              <el-tab-pane
+                                :label="t('visualization.params')"
+                                name="parameterList"
+                              ></el-tab-pane>
                             </el-tabs>
                           </template>
                           <el-option
@@ -202,7 +212,9 @@
 
                     <div class="ds-view-content" v-show="baseDatasetInfo.viewExpand">
                       <div style="display: flex; width: 100%; height: 22px">
-                        <div class="ds-content-title">选择关联的图表</div>
+                        <div class="ds-content-title">
+                          {{ t('visualization.select_params_connect_view') }}
+                        </div>
                         <div class="custom-view-diver"></div>
                         <div>
                           <el-checkbox
@@ -211,7 +223,7 @@
                             :indeterminate="baseDatasetInfo.checkAllIsIndeterminate"
                             :disabled="!baseDatasetInfo.fieldIdSelected"
                             @change="batchSelectChange($event, baseDatasetInfo)"
-                            >全选</el-checkbox
+                            >{{ t('visualization.select_all') }}</el-checkbox
                           >
                         </div>
                       </div>
@@ -246,22 +258,30 @@
               </el-row>
             </el-row>
             <div v-else class="empty">
-              <empty-background description="请配置参数" img-type="noneWhite" />
+              <empty-background
+                :description="t('visualization.setting_params_tips')"
+                img-type="noneWhite"
+              />
             </div>
           </el-col>
           <el-col :span="5" class="params-attach-setting">
             <el-row v-if="state.curNodeId">
-              <el-row class="new-params-title"> 参数配置 </el-row>
+              <el-row class="new-params-title">{{ t('visualization.setting_params') }} </el-row>
               <el-row class="params-attach-content">
                 <el-row>
-                  <el-checkbox v-model="state.outerParamsInfo.required">必填 </el-checkbox>
+                  <el-checkbox v-model="state.outerParamsInfo.required"
+                    >{{ t('visualization.required') }}
+                  </el-checkbox>
                 </el-row>
                 <el-row>
-                  <el-checkbox v-model="state.outerParamsInfo.enabledDefault">默认值 </el-checkbox>
+                  <el-checkbox v-model="state.outerParamsInfo.enabledDefault"
+                    >{{ t('visualization.default_value') }}
+                  </el-checkbox>
                   <el-tooltip class="item" placement="bottom">
                     <template #content>
                       <div>
-                        请使用JSON数组格式 示例: <br />单值 ["name1"], 多值 ["name1","name2"]
+                        {{ t('visualization.default_value_tips1') }} <br />
+                        {{ t('visualization.default_value_tips2') }}
                       </div>
                     </template>
                     <el-icon class="hint-icon">
@@ -271,7 +291,7 @@
                 </el-row>
                 <el-input
                   :ref="el => setArgRef(el, state.outerParamsInfo.paramsInfoId)"
-                  placeholder='请输入参数,如:["name1"]'
+                  :placeholder="t('visualization.default_value_tips3')"
                   v-model="state.outerParamsInfo.defaultValue"
                   type="textarea"
                   :autosize="{ minRows: 4, maxRows: 8 }"
@@ -333,12 +353,12 @@ const state = reactive({
   outerParamsSetVisible: false,
   optMenu: [
     {
-      label: '重命名',
+      label: t('visualization.rename'),
       svgName: edit,
       command: 'rename'
     },
     {
-      label: '删除',
+      label: t('visualization.delete'),
       svgName: _delete,
       command: 'delete'
     }
@@ -383,17 +403,17 @@ const state = reactive({
   currentLinkPanelViewArray: [],
   viewIdFieldArrayMap: {},
   widgetSubjectsTrans: {
-    timeYearWidget: '年份过滤组件',
-    timeMonthWidget: '年月过滤组件',
-    timeDateWidget: '日期过滤组件',
-    timeDateRangeWidget: '日期范围过滤组件',
-    textSelectWidget: '文本下拉过滤组件',
-    textSelectGridWidget: '文本列表过滤组件',
-    textInputWidget: '文本搜索过滤组件',
-    textSelectTreeWidget: '下拉树过滤组件',
-    numberSelectWidget: '数字下拉过滤组件',
-    numberSelectGridWidget: '数字列表过滤组件',
-    numberRangeWidget: '数值区间过滤组件'
+    timeYearWidget: t('visualization.time_year_widget'),
+    timeMonthWidget: t('visualization.time_month_widget'),
+    timeDateWidget: t('visualization.time_date_widget'),
+    timeDateRangeWidget: t('visualization.time_date_range_widget'),
+    textSelectWidget: t('visualization.text_select_widget'),
+    textSelectGridWidget: t('visualization.time_year_widget'),
+    textInputWidget: t('visualization.text_input_widget'),
+    textSelectTreeWidget: t('visualization.text_select_tree_widget'),
+    numberSelectWidget: t('visualization.number_select_widget'),
+    numberSelectGridWidget: t('visualization.number_select_grid_widget'),
+    numberRangeWidget: t('visualization.number_range_widget')
   }
 })
 
@@ -433,7 +453,7 @@ const validateArgs = (val, id) => {
     if (!child) {
       const errorDom = document.createElement('div')
       errorDom.className = 'error-msg'
-      errorDom.innerText = '格式错误'
+      errorDom.innerText = t('visualization.format_error')
       e.parentNode.appendChild(errorDom)
     }
     return false
@@ -596,8 +616,14 @@ const jsonArrayCheck = params => {
 const save = () => {
   const outerParamsCopy = deepCopy(state.outerParams)
   let checkErrorNum = 0
+  let checkNullErrorNum = 0
   let checkMessage = ''
+  const paramNameArray = []
   outerParamsCopy.outerParamsInfoArray?.forEach(outerParamsInfo => {
+    if (!outerParamsInfo.paramName || paramNameArray.includes(outerParamsInfo.paramName)) {
+      checkNullErrorNum++
+    }
+    paramNameArray.push(outerParamsInfo.paramName)
     if (outerParamsInfo.defaultValue && !jsonArrayCheck(outerParamsInfo.defaultValue)) {
       checkErrorNum++
       checkMessage = checkMessage + `【${outerParamsInfo.paramName}】`
@@ -630,7 +656,15 @@ const save = () => {
   })
   if (checkErrorNum > 0) {
     ElMessage({
-      message: `参数${checkMessage}默认值格式不正确！`,
+      message: t('visualization.params_setting_check_message'),
+      type: 'warning',
+      showClose: true
+    })
+    return
+  }
+  if (checkNullErrorNum > 0) {
+    ElMessage({
+      message: t('visualization.params_setting_check_message_tips'),
       type: 'warning',
       showClose: true
     })

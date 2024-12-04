@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import logo from '@/assets/svg/logo.svg'
 import copilot from '@/assets/svg/copilot.svg'
+import msgNotice from '@/assets/svg/msg-notice.svg'
 import dvAi from '@/assets/svg/dv-ai.svg'
 import dvPreviewDownload from '@/assets/svg/dv-preview-download.svg'
 import { computed, onMounted, ref } from 'vue'
@@ -10,7 +11,6 @@ import { formatRoute } from '@/router/establish'
 import HeaderMenuItem from './HeaderMenuItem.vue'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import { Icon } from '@/components/icon-custom'
-import { ElHeader, ElMenu } from 'element-plus-secondary'
 import SystemCfg from './SystemCfg.vue'
 import ToolboxCfg from './ToolboxCfg.vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -23,11 +23,14 @@ import AiComponent from '@/layout/components/AiComponent.vue'
 import { findBaseParams } from '@/api/aiComponent'
 import AiTips from '@/layout/components/AiTips.vue'
 import CopilotCom from '@/layout/components/Copilot.vue'
+import DesktopSetting from './DesktopSetting.vue'
 
 const appearanceStore = useAppearanceStoreWithOut()
 const { push } = useRouter()
 const route = useRoute()
 import { useCache } from '@/hooks/web/useCache'
+import { useI18n } from '@/hooks/web/useI18n'
+import { msgCountApi } from '@/api/msg'
 const { wsCache } = useCache('localStorage')
 const aiBaseUrl = ref('https://maxkb.fit2cloud.com/ui/chat/2ddd8b594ce09dbb?mode=embed')
 const handleIconClick = () => {
@@ -38,7 +41,7 @@ const handleIconClick = () => {
 const handleAiClick = () => {
   useEmitt().emitter.emit('aiComponentChange')
 }
-
+const { t } = useI18n()
 const handleCopilotClick = () => {
   push('/copilot/index')
 }
@@ -57,19 +60,24 @@ const downloadClick = params => {
 }
 const routers: any[] = formatRoute(permissionStore.getRoutersNotHidden as AppCustomRouteRecordRaw[])
 const showSystem = ref(false)
+const showMsg = ref(false)
 const showToolbox = ref(false)
 const showOverlay = ref(false)
-const showOverlayCopilot = ref(true)
+const showOverlayCopilot = ref(false)
 const handleSelect = (index: string) => {
   // 自定义事件
   if (isExternal(index)) {
-    window.open(index, '_blank')
+    const openType = wsCache.get('open-backend') === '1' ? '_self' : '_blank'
+    window.open(index, openType)
   } else {
     push(index)
   }
 }
 const initShowSystem = () => {
   showSystem.value = permissionStore.getRouters.some(route => route.path === '/system')
+}
+const initShowMsg = () => {
+  showMsg.value = permissionStore.getRouters.some(route => route.path === '/msg')
 }
 const initShowToolbox = () => {
   showToolbox.value = permissionStore.getRouters.some(route => route.path === '/toolbox')
@@ -96,11 +104,11 @@ const initAiBase = async () => {
 
 const initCopilotBase = async () => {
   const aiCopilotCheck = wsCache.get('DE-COPILOT-TIPS-CHECK')
-  if (aiCopilotCheck === 'CHECKED') {
-    showOverlayCopilot.value = false
-  } else {
-    showOverlayCopilot.value = true
-  }
+  // if (aiCopilotCheck === 'CHECKED') {
+  //   showOverlayCopilot.value = false
+  // } else {
+  //   showOverlayCopilot.value = true
+  // }
 }
 
 const aiTipsConfirm = () => {
@@ -108,16 +116,26 @@ const aiTipsConfirm = () => {
   showOverlay.value = false
 }
 
+const msgNoticePush = () => {
+  push('/msg/msg-fill')
+}
+
 const copilotConfirm = () => {
   wsCache.set('DE-COPILOT-TIPS-CHECK', 'CHECKED')
   showOverlayCopilot.value = false
 }
+const badgeCount = ref('0')
 
 onMounted(() => {
   initShowSystem()
   initShowToolbox()
+  initShowMsg()
   initAiBase()
   initCopilotBase()
+
+  msgCountApi().then(res => {
+    badgeCount.value = (res?.data > 99 ? '99+' : res?.data) || '0'
+  })
 })
 </script>
 
@@ -158,7 +176,7 @@ onMounted(() => {
       >
         <Icon name="dv-ai"><dvAi @click="handleAiClick" class="svg-icon" /></Icon>
       </el-icon>
-      <el-tooltip effect="dark" content="数据导出中心" placement="bottom">
+      <el-tooltip effect="dark" :content="t('data_export.export_center')" placement="bottom">
         <el-icon
           class="preview-download_icon"
           :class="navigateBg === 'light' && 'is-light-setting'"
@@ -176,6 +194,29 @@ onMounted(() => {
       />
       <ToolboxCfg v-if="showToolbox" />
       <TopDoc v-if="appearanceStore.getShowDoc" />
+      <el-tooltip
+        v-if="showMsg"
+        effect="dark"
+        :content="$t('v_query.msg_center')"
+        placement="bottom"
+      >
+        <el-badge
+          style="margin-right: 10px"
+          :hidden="[0, '0'].includes(badgeCount)"
+          :value="badgeCount"
+          class="ed-badge_custom"
+        >
+          <el-icon
+            class="preview-download_icon"
+            :class="navigateBg === 'light' && 'is-light-setting'"
+          >
+            <Icon name="dv-preview-download"
+              ><msgNotice @click="msgNoticePush" class="svg-icon"
+            /></Icon>
+          </el-icon>
+        </el-badge>
+      </el-tooltip>
+
       <SystemCfg v-if="showSystem" />
       <AccountOperator />
       <ai-component
@@ -185,10 +226,23 @@ onMounted(() => {
       <div v-if="showOverlay && appearanceStore.getShowAi" class="overlay"></div>
       <div v-if="showOverlayCopilot && appearanceStore.getShowCopilot" class="overlay"></div>
     </div>
+    <div v-else class="operate-setting">
+      <desktop-setting />
+    </div>
   </el-header>
 </template>
 
 <style lang="less" scoped>
+:deep(.ed-badge_custom) {
+  --ed-badge-size: 14px;
+  .ed-badge__content {
+    right: 0;
+    padding: 3px;
+    border: none;
+    font-size: 8px;
+    transform: translateX(20%) translateY(-30%);
+  }
+}
 .preview-download_icon {
   padding: 5px;
   height: 28px;

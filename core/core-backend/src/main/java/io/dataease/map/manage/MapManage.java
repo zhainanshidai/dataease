@@ -3,17 +3,20 @@ package io.dataease.map.manage;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.dataease.api.map.dto.GeometryNodeCreator;
 import io.dataease.api.map.vo.AreaNode;
+import io.dataease.api.map.vo.CustomGeoArea;
+import io.dataease.api.map.vo.CustomGeoSubArea;
 import io.dataease.constant.StaticResourceConstants;
 import io.dataease.exception.DEException;
 import io.dataease.map.bo.AreaBO;
 import io.dataease.map.dao.auto.entity.Area;
+import io.dataease.map.dao.auto.entity.CoreCustomGeoArea;
+import io.dataease.map.dao.auto.entity.CoreCustomGeoSubArea;
 import io.dataease.map.dao.auto.mapper.AreaMapper;
+import io.dataease.map.dao.auto.mapper.CoreCustomGeoAreaMapper;
+import io.dataease.map.dao.auto.mapper.CoreCustomGeoSubAreaMapper;
 import io.dataease.map.dao.ext.entity.CoreAreaCustom;
 import io.dataease.map.dao.ext.mapper.CoreAreaCustomMapper;
-import io.dataease.utils.BeanUtils;
-import io.dataease.utils.CommonBeanFactory;
-import io.dataease.utils.FileUtils;
-import io.dataease.utils.LogUtil;
+import io.dataease.utils.*;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
@@ -32,6 +35,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import static io.dataease.constant.CacheConstant.CommonCacheConstant.CUSTOM_GEO_CACHE;
 import static io.dataease.constant.CacheConstant.CommonCacheConstant.WORLD_MAP_CACHE;
 
 @Component
@@ -50,6 +54,12 @@ public class MapManage {
 
     @Resource
     private AreaMapper areaMapper;
+
+    @Resource
+    private CoreCustomGeoAreaMapper coreCustomGeoAreaMapper;
+
+    @Resource
+    private CoreCustomGeoSubAreaMapper coreCustomGeoSubAreaMapper;
 
     @Resource
     private CoreAreaCustomMapper coreAreaCustomMapper;
@@ -173,6 +183,62 @@ public class MapManage {
                 file.delete();
             }
         });
+    }
+
+    @Cacheable(value = CUSTOM_GEO_CACHE, key = "'custom_geo_area'")
+    public List<CustomGeoArea> listCustomGeoArea() {
+        return coreCustomGeoAreaMapper.selectList(null).stream().map(o -> BeanUtils.copyBean(new CustomGeoArea(), o)).toList();
+    }
+
+    public List<CustomGeoSubArea> getCustomGeoArea(String areaId) {
+        var query = new QueryWrapper<CoreCustomGeoSubArea>();
+        query.eq("geo_area_id", areaId);
+        return coreCustomGeoSubAreaMapper.selectList(query).stream().map(o -> BeanUtils.copyBean(new CustomGeoSubArea(), o)).toList();
+    }
+
+    @CacheEvict(cacheNames = CUSTOM_GEO_CACHE, key = "'custom_geo_area'")
+    @Transactional
+    public void deleteCustomGeoArea(String areaId) {
+        coreCustomGeoAreaMapper.deleteById(areaId);
+        var q = new QueryWrapper<CoreCustomGeoSubArea>();
+        q.eq("geo_area_id", areaId);
+        coreCustomGeoSubAreaMapper.delete(q);
+    }
+
+    @CacheEvict(cacheNames = CUSTOM_GEO_CACHE, key = "'custom_geo_area'")
+    @Transactional
+    public void saveCustomGeoArea(CustomGeoArea geoArea) {
+        var coreCustomGeoArea = new CoreCustomGeoArea();
+        BeanUtils.copyBean(coreCustomGeoArea, geoArea);
+        if (ObjectUtils.isEmpty(coreCustomGeoArea.getId())) {
+            coreCustomGeoArea.setId("custom_" + IDUtils.snowID());
+            coreCustomGeoAreaMapper.insert(coreCustomGeoArea);
+        } else {
+            coreCustomGeoAreaMapper.updateById(coreCustomGeoArea);
+        }
+    }
+
+    @Transactional
+    public void deleteCustomGeoSubArea(long areaId) {
+        coreCustomGeoSubAreaMapper.deleteById(areaId);
+    }
+
+    @Transactional
+    public void saveCustomGeoSubArea(CustomGeoSubArea customGeoSubArea) {
+        var geoSubArea = new CoreCustomGeoSubArea();
+        BeanUtils.copyBean(geoSubArea, customGeoSubArea);
+        if (ObjectUtils.isEmpty(geoSubArea.getId())) {
+            geoSubArea.setId(IDUtils.snowID());
+            coreCustomGeoSubAreaMapper.insert(geoSubArea);
+        } else {
+            coreCustomGeoSubAreaMapper.updateById(geoSubArea);
+        }
+    }
+
+    public List<AreaNode> getCustomGeoSubAreaOptions() {
+        var q = new QueryWrapper<Area>();
+        q.eq("pid", "156");
+        return areaMapper.selectList(q).stream().map(a -> BeanUtils.copyBean(AreaNode.builder().build(), a)).toList();
     }
 
     public void childTreeIdList(List<String> pidList, List<String> resultList) {

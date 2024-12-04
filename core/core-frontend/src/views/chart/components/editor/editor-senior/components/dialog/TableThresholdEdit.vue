@@ -191,7 +191,6 @@ const initOptions = (item, fieldObj) => {
       item.options = JSON.parse(JSON.stringify(textOptions))
     } else if (fieldObj.deType === 1) {
       item.options = JSON.parse(JSON.stringify(dateOptions))
-      item.type = 'fixed'
     } else {
       item.options = JSON.parse(JSON.stringify(valueOptions))
     }
@@ -375,12 +374,7 @@ const changeConditionItemType = item => {
   }
 }
 const getFieldOptions = fieldItem => {
-  const deType = state.fields.filter(ele => ele.id === fieldItem.fieldId)?.[0]?.deType
-  if (deType === 1) {
-    return fieldOptions.filter(ele => ele.value === 'fixed')
-  } else {
-    return fieldOptions
-  }
+  return fieldOptions
 }
 
 init()

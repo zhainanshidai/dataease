@@ -40,7 +40,7 @@ const handleDragEnd = e => {
     <drag-component
       :themes="themes"
       :icon="dbMoreWeb"
-      label="网页"
+      :label="$t('visualization.web')"
       drag-info="DeFrame&DeFrame"
     ></drag-component>
   </div>

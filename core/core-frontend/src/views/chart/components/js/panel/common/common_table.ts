@@ -14,36 +14,42 @@ import {
 } from '@/views/chart/components/editor/util/chart'
 import {
   BaseTooltip,
-  getAutoAdjustPosition,
-  getTooltipDefaultOptions,
-  S2Theme,
-  setTooltipContainerStyle,
-  Style,
-  S2Options,
-  SERIES_NUMBER_FIELD,
-  type PivotSheet,
-  type Node,
-  type Meta,
-  S2DataConfig,
-  SpreadSheet,
-  InteractionStateName,
-  InteractionName,
   DataCellBrushSelection,
-  TableDataCell,
-  MergedCell,
+  FONT_FAMILY,
+  getAutoAdjustPosition,
+  getEmptyPlaceholder,
   getPolygonPoints,
-  renderPolygon,
+  getTooltipDefaultOptions,
+  InteractionName,
+  InteractionStateName,
+  MergedCell,
   MergedCellInfo,
-  ViewMeta,
+  type Meta,
+  type Node,
+  type PivotSheet,
+  renderPolygon,
+  renderText,
+  S2DataConfig, S2Event,
+  S2Options,
+  S2Theme,
+  SERIES_NUMBER_FIELD,
+  setTooltipContainerStyle,
+  SHAPE_STYLE_MAP,
+  SpreadSheet,
+  Style,
+  TableColCell,
+  TableDataCell,
   updateShapeAttr,
-  SHAPE_STYLE_MAP
+  ViewMeta
 } from '@antv/s2'
-import { keys, intersection, filter, cloneDeep, merge, find, repeat } from 'lodash-es'
+import { cloneDeep, filter, find, intersection, keys, merge, repeat } from 'lodash-es'
 import { createVNode, render } from 'vue'
 import TableTooltip from '@/views/chart/components/editor/common/TableTooltip.vue'
 import Exceljs from 'exceljs'
 import { saveAs } from 'file-saver'
 import { ElMessage } from 'element-plus-secondary'
+import { useI18n } from '@/hooks/web/useI18n'
+const { t:i18nt } = useI18n()
 
 export function getCustomTheme(chart: Chart): S2Theme {
   const headerColor = hexColorToRGBA(
@@ -59,7 +65,7 @@ export function getCustomTheme(chart: Chart): S2Theme {
   )
   const scrollBarColor = DEFAULT_BASIC_STYLE.tableScrollBarColor
   const scrollBarHoverColor = resetRgbOpacity(scrollBarColor, 3)
-
+  const textFontFamily = chart.fontFamily ? chart.fontFamily : FONT_FAMILY
   const theme: S2Theme = {
     background: {
       color: '#00000000'
@@ -82,17 +88,20 @@ export function getCustomTheme(chart: Chart): S2Theme {
       text: {
         fill: DEFAULT_TABLE_HEADER.tableHeaderFontColor,
         fontSize: DEFAULT_TABLE_HEADER.tableTitleFontSize,
-        textAlign: headerAlign
+        textAlign: headerAlign,
+        fontFamily: textFontFamily
       },
       bolderText: {
         fill: DEFAULT_TABLE_HEADER.tableHeaderFontColor,
         fontSize: DEFAULT_TABLE_HEADER.tableTitleFontSize,
-        textAlign: headerAlign
+        textAlign: headerAlign,
+        fontFamily: textFontFamily
       },
       measureText: {
         fill: DEFAULT_TABLE_HEADER.tableHeaderFontColor,
         fontSize: DEFAULT_TABLE_HEADER.tableTitleFontSize,
-        textAlign: headerAlign
+        textAlign: headerAlign,
+        fontFamily: textFontFamily
       }
     },
     rowCell: {
@@ -105,22 +114,26 @@ export function getCustomTheme(chart: Chart): S2Theme {
         fill: DEFAULT_TABLE_HEADER.tableHeaderFontColor,
         fontSize: DEFAULT_TABLE_HEADER.tableTitleFontSize,
         textAlign: headerAlign,
-        textBaseline: 'middle'
+        textBaseline: 'middle',
+        fontFamily: textFontFamily
       },
       bolderText: {
         fill: DEFAULT_TABLE_HEADER.tableHeaderFontColor,
         fontSize: DEFAULT_TABLE_HEADER.tableTitleFontSize,
-        textAlign: headerAlign
+        textAlign: headerAlign,
+        fontFamily: textFontFamily
       },
       measureText: {
         fill: DEFAULT_TABLE_HEADER.tableHeaderFontColor,
         fontSize: DEFAULT_TABLE_HEADER.tableTitleFontSize,
-        textAlign: headerAlign
+        textAlign: headerAlign,
+        fontFamily: textFontFamily
       },
       seriesText: {
         fill: DEFAULT_TABLE_CELL.tableItemBgColor,
         fontSize: DEFAULT_TABLE_CELL.tableItemFontSize,
-        textAlign: itemAlign
+        textAlign: itemAlign,
+        fontFamily: textFontFamily
       }
     },
     colCell: {
@@ -132,17 +145,20 @@ export function getCustomTheme(chart: Chart): S2Theme {
       text: {
         fill: DEFAULT_TABLE_HEADER.tableHeaderFontColor,
         fontSize: DEFAULT_TABLE_HEADER.tableTitleFontSize,
-        textAlign: headerAlign
+        textAlign: headerAlign,
+        fontFamily: textFontFamily
       },
       bolderText: {
         fill: DEFAULT_TABLE_HEADER.tableHeaderFontColor,
         fontSize: DEFAULT_TABLE_HEADER.tableTitleFontSize,
-        textAlign: headerAlign
+        textAlign: headerAlign,
+        fontFamily: textFontFamily
       },
       measureText: {
         fill: DEFAULT_TABLE_HEADER.tableHeaderFontColor,
         fontSize: DEFAULT_TABLE_HEADER.tableTitleFontSize,
-        textAlign: headerAlign
+        textAlign: headerAlign,
+        fontFamily: textFontFamily
       }
     },
     dataCell: {
@@ -154,22 +170,27 @@ export function getCustomTheme(chart: Chart): S2Theme {
       text: {
         fill: DEFAULT_TABLE_CELL.tableFontColor,
         fontSize: DEFAULT_TABLE_CELL.tableItemFontSize,
-        textAlign: itemAlign
+        textAlign: itemAlign,
+        fontFamily: textFontFamily
       },
       bolderText: {
         fill: DEFAULT_TABLE_CELL.tableFontColor,
         fontSize: DEFAULT_TABLE_CELL.tableItemFontSize,
-        textAlign: itemAlign
+        textAlign: itemAlign,
+        fontFamily: textFontFamily
       },
       measureText: {
         fill: DEFAULT_TABLE_CELL.tableFontColor,
         fontSize: DEFAULT_TABLE_CELL.tableItemFontSize,
-        textAlign: headerAlign
+        textAlign: headerAlign,
+        fontFamily: textFontFamily
       }
     },
     scrollBar: {
       thumbColor: scrollBarColor,
-      thumbHoverColor: scrollBarHoverColor
+      thumbHoverColor: scrollBarHoverColor,
+      size: 8,
+      hoverSize: 12
     }
   }
 
@@ -239,21 +260,24 @@ export function getCustomTheme(chart: Chart): S2Theme {
             fontSize: tableTitleFontSize,
             textAlign: tableHeaderAlign,
             fontStyle,
-            fontWeight
+            fontWeight,
+            fontFamily: textFontFamily
           },
           text: {
             fill: tableHeaderFontColor,
             fontSize: tableTitleFontSize,
             textAlign: tableHeaderAlign,
             fontStyle,
-            fontWeight
+            fontWeight,
+            fontFamily: textFontFamily
           },
           measureText: {
             fill: tableHeaderFontColor,
             fontSize: tableTitleFontSize,
             textAlign: tableHeaderAlign,
             fontStyle,
-            fontWeight
+            fontWeight,
+            fontFamily: textFontFamily
           }
         },
         colCell: {
@@ -265,21 +289,24 @@ export function getCustomTheme(chart: Chart): S2Theme {
             fontSize: tableTitleFontSize,
             textAlign: tableHeaderAlign,
             fontStyle,
-            fontWeight
+            fontWeight,
+            fontFamily: textFontFamily
           },
           text: {
             fill: tableHeaderFontColor,
             fontSize: tableTitleFontSize,
             textAlign: tableHeaderAlign,
             fontStyle,
-            fontWeight
+            fontWeight,
+            fontFamily: textFontFamily
           },
           measureText: {
             fill: tableHeaderFontColor,
             fontSize: tableTitleFontSize,
             textAlign: tableHeaderAlign,
             fontStyle,
-            fontWeight
+            fontWeight,
+            fontFamily: textFontFamily
           }
         }
       }
@@ -348,22 +375,26 @@ export function getCustomTheme(chart: Chart): S2Theme {
           bolderText: {
             fill: tableFontColor,
             textAlign: tableItemAlign,
-            fontSize: tableItemFontSize
+            fontSize: tableItemFontSize,
+            fontFamily: textFontFamily
           },
           text: {
             fill: tableFontColor,
             textAlign: tableItemAlign,
-            fontSize: tableItemFontSize
+            fontSize: tableItemFontSize,
+            fontFamily: textFontFamily
           },
           measureText: {
             fill: tableFontColor,
             textAlign: tableItemAlign,
-            fontSize: tableItemFontSize
+            fontSize: tableItemFontSize,
+            fontFamily: textFontFamily
           },
           seriesText: {
             fill: tableFontColor,
             textAlign: tableItemAlign,
-            fontSize: tableItemFontSize
+            fontSize: tableItemFontSize,
+            fontFamily: textFontFamily
           }
         },
         dataCell: {
@@ -376,28 +407,32 @@ export function getCustomTheme(chart: Chart): S2Theme {
             textAlign: tableItemAlign,
             fontSize: tableItemFontSize,
             fontStyle,
-            fontWeight
+            fontWeight,
+            fontFamily: textFontFamily
           },
           text: {
             fill: tableFontColor,
             textAlign: tableItemAlign,
             fontSize: tableItemFontSize,
             fontStyle,
-            fontWeight
+            fontWeight,
+            fontFamily: textFontFamily
           },
           measureText: {
             fill: tableFontColor,
             textAlign: tableItemAlign,
             fontSize: tableItemFontSize,
             fontStyle,
-            fontWeight
+            fontWeight,
+            fontFamily: textFontFamily
           },
           seriesText: {
             fill: tableFontColor,
             textAlign: tableItemAlign,
             fontSize: tableItemFontSize,
             fontStyle,
-            fontWeight
+            fontWeight,
+            fontFamily: textFontFamily
           }
         }
       }
@@ -489,7 +524,6 @@ export function getStyle(chart: Chart, dataConfig: S2DataConfig): Style {
             : baseWidth * 10
           const resultWidth = parseInt(tmpWidth.toFixed(0))
           if (fullFilled) {
-            widthArr.push(resultWidth)
             if (widthArr.length === dataConfig.meta.length - 1) {
               const curTotalWidth = widthArr.reduce((p, n) => {
                 return p + n
@@ -499,6 +533,7 @@ export function getStyle(chart: Chart, dataConfig: S2DataConfig): Style {
                 return restWidth
               }
             }
+            widthArr.push(resultWidth)
           }
           return resultWidth
         }
@@ -737,40 +772,41 @@ export function mappingColor(value, defaultColor, field, type, filedValueMap?, r
       }
     } else {
       // time
-      const tv = new Date(t.value.replace(/-/g, '/') + ' GMT+8').getTime()
+      const fc = field.conditions[i]
+      tv = new Date(tv.replace(/-/g, '/') + ' GMT+8').getTime()
       const v = new Date(value.replace(/-/g, '/') + ' GMT+8').getTime()
-      if (t.term === 'eq') {
+      if (fc.term === 'eq') {
         if (v === tv) {
-          color = t[type]
+          color = fc[type]
           flag = true
         }
-      } else if (t.term === 'not_eq') {
+      } else if (fc.term === 'not_eq') {
         if (v !== tv) {
-          color = t[type]
+          color = fc[type]
           flag = true
         }
-      } else if (t.term === 'lt') {
+      } else if (fc.term === 'lt') {
         if (v < tv) {
-          color = t[type]
+          color = fc[type]
           flag = true
         }
-      } else if (t.term === 'gt') {
+      } else if (fc.term === 'gt') {
         if (v > tv) {
-          color = t[type]
+          color = fc[type]
           flag = true
         }
-      } else if (t.term === 'le') {
+      } else if (fc.term === 'le') {
         if (v <= tv) {
-          color = t[type]
+          color = fc[type]
           flag = true
         }
-      } else if (t.term === 'ge') {
+      } else if (fc.term === 'ge') {
         if (v >= tv) {
-          color = t[type]
+          color = fc[type]
           flag = true
         }
-      } else if (t.term === 'default') {
-        color = t[type]
+      } else if (fc.term === 'default') {
+        color = fc[type]
         flag = true
       }
       if (flag) {
@@ -976,11 +1012,13 @@ export function configHeaderInteraction(chart: Chart, option: S2Options) {
 
 export function configTooltip(chart: Chart, option: S2Options) {
   const { tooltip } = parseJson(chart.customAttr)
+  const textFontFamily = chart.fontFamily ? chart.fontFamily : FONT_FAMILY
   option.tooltip = {
     ...option.tooltip,
     style: {
       background: tooltip.backgroundColor,
       fontSize: tooltip.fontSize + 'px',
+      fontFamily: textFontFamily,
       color: tooltip.color,
       boxShadow: 'rgba(0, 0, 0, 0.1) 0px 4px 8px 0px',
       borderRadius: '3px',
@@ -1468,7 +1506,7 @@ export function configMergeCells(chart: Chart, options: S2Options, dataConfig: S
                   showText: j === textIndex
                 })
               }
-              if (index === end) {
+              if (index === end && lastVal === curVal) {
                 tmpMergeCells.push({
                   colIndex: showIndex ? i + 1 : i,
                   rowIndex: index,
@@ -1476,7 +1514,7 @@ export function configMergeCells(chart: Chart, options: S2Options, dataConfig: S
                 })
               }
               mergedCellsInfo.push(tmpMergeCells)
-              curMergedColInfo.push([lastIndex, index === end ? index : index - 1])
+              curMergedColInfo.push([lastIndex, index === end && lastVal === curVal ? index : index - 1])
             }
             lastVal = curVal
             lastIndex = index
@@ -1557,4 +1595,325 @@ export class CustomDataCell extends TableDataCell {
       updateShapeAttr(shape, SHAPE_STYLE_MAP.borderColor, 'transparent')
     })
   }
+
+  /**
+   * 重写绘制文本内容的方法
+   * @protected
+   */
+  protected drawTextShape() {
+    if (this.meta.autoWrap) {
+      drawTextShape(this, false)
+    } else {
+      super.drawTextShape()
+    }
+  }
+}
+
+export class CustomTableColCell extends TableColCell {
+
+  /**
+   * 重写是为了表头文本内容的换行
+   * @protected
+   */
+  protected drawTextShape() {
+    if (this.meta.autoWrap) {
+      drawTextShape(this, true)
+    } else {
+      super.drawTextShape()
+    }
+  }
+}
+
+/**
+ * 绘制文本 换行
+ * @param cell
+ * @param isHeader
+ */
+const drawTextShape = (cell, isHeader) => {
+  // 换行符
+  const lineBreak = '\n'
+  // 省略号
+  const ellipsis = '...'
+  // 用户配置的最大行数
+  const maxLines = cell.meta.maxLines ?? 1
+  const {
+    options: { placeholder },
+  } = cell.spreadsheet;
+  const emptyPlaceholder = getEmptyPlaceholder(this, placeholder);
+  // 单元格文本
+  const { formattedValue } = cell.getFormattedFieldValue()
+  // 获取文本样式
+  const textStyle = cell.getTextStyle()
+  // 宽度能放几个字符，就放几个，放不下就换行
+  let wrapText = getWrapText(formattedValue ? formattedValue?.toString() : emptyPlaceholder, textStyle, cell.meta.width, cell.spreadsheet)
+  const lines = wrapText.split(lineBreak)
+
+  // 不是表头，处理文本高度和换行
+  if (!isHeader) {
+    const textHeight = getWrapTextHeight(wrapText.replaceAll(lineBreak, ''), textStyle, cell.spreadsheet, maxLines)
+    const lineCountInCell = Math.floor(cell.meta.height / textHeight)
+    const wrapTextArr = lines.slice(0, lineCountInCell)
+
+    // 根据行数调整换行后的文本内容
+    wrapText = lineCountInCell === 1
+      ? lines[0].slice(0, -1) + ellipsis
+      : wrapTextArr.join(lineBreak) || ellipsis
+    const resultWrapArr = wrapText.split(lineBreak)
+    // 控制最大行数
+    if ( !wrapText.endsWith(ellipsis) && (lines.length > maxLines || lines.length > lineCountInCell)) {
+      // 第一行的字符个数
+      const firstLineStrNumber = resultWrapArr[0].length
+      const temp = resultWrapArr.slice(0, Math.min(maxLines, lineCountInCell))
+      // 修改最后一行的字符,按照第一行字符个数-1，修改最后一行的字符为...
+      temp[temp.length - 1] = temp[temp.length-1].slice(0,firstLineStrNumber - 1) + ellipsis
+      wrapText = temp.join(lineBreak)
+    }
+  } else {
+    const resultWrapArr = wrapText.split(lineBreak)
+    // 控制最大行数
+    if (lines.length > maxLines) {
+      const temp = resultWrapArr.slice(0, maxLines)
+      // 第一行的字符个数
+      const firstLineStrNumber = resultWrapArr[0].length
+      // 修改最后一行的字符
+      temp[temp.length - 1] = temp[temp.length-1].slice(0,firstLineStrNumber - 1) + ellipsis
+      wrapText = temp.join(lineBreak)
+    }
+  }
+  // 设置最终文本和其宽度
+  cell.actualText = wrapText
+  cell.actualTextWidth = cell.spreadsheet.measureTextWidth(wrapText, textStyle)
+
+  // 获取文本位置并渲染文本
+  const position = cell.getTextPosition()
+  // 绘制文本
+  cell.textShape = renderText(cell, [cell.textShape], position.x, position.y, wrapText, textStyle)
+
+  // 将文本形状添加到形状数组
+  cell.textShapes.push(cell.textShape)
+}
+
+/**
+ * 计算表头高度
+ * @param info 单元格信息
+ * @param newChart
+ * @param tableHeader 表头配置
+ * @param basicStyle 表格基础样式
+ * @param layoutResult
+ */
+export const calculateHeaderHeight = (info, newChart, tableHeader, basicStyle, layoutResult) => {
+  if (tableHeader.showTableHeader === false ) return
+  const ev = layoutResult || newChart.facet.layoutResult
+  const maxLines = basicStyle.maxLines ?? 1
+  const textStyle = { ...newChart.theme.cornerCell.text }
+  const sourceText = info.info.meta.value
+  let maxHeight = getWrapTextHeight(getWrapText(sourceText, textStyle, info.info.resizedWidth, ev.spreadsheet), textStyle, ev.spreadsheet, maxLines)
+
+  // 获取最大高度的列，排除当前列
+  const maxHeightCol = ev.colLeafNodes.filter(n => n.colIndex !== info.info.meta.colIndex)
+    .reduce((maxHeightNode, currentNode) => {
+      const wrapTextHeight = getWrapTextHeight(getWrapText(currentNode.value, textStyle, currentNode.width, currentNode.spreadsheet), textStyle, currentNode.spreadsheet, maxLines)
+      return wrapTextHeight > maxHeightNode.height
+        ? { height: wrapTextHeight, colIndex: currentNode.colIndex }
+        : maxHeightNode
+    }, { height: 0 })
+
+  // 使用最大高度
+  maxHeight = Math.max(maxHeight, maxHeightCol.height) + textStyle.fontSize + 10.5
+
+  if (layoutResult) {
+    if (basicStyle.tableColumnMode === 'adapt') maxHeight -= textStyle.fontSize - 2
+    ev.colLeafNodes.forEach(n => n.height = maxHeight)
+    ev.colsHierarchy.height = maxHeight
+  }
+
+  newChart.store.set('autoCalcHeight', maxHeight)
+}
+
+/**
+ * 获取换行文本
+ * 累加字符串单个字符的宽度，超过单元格宽度时，添加换行
+ * @param sourceText
+ * @param textStyle
+ * @param cellWidth
+ * @param spreadsheet
+ */
+const   getWrapText = (sourceText, textStyle, cellWidth, spreadsheet) => {
+  if (!sourceText && sourceText !== 0) return ''
+  sourceText = sourceText.toString().trim()
+  const getTextWidth = text => spreadsheet.measureTextWidthRoughly(text, textStyle)
+
+  let resultWrapText = ''
+  let restText = ''
+  let restTextWidth = 0
+  for (let i = 0; i < sourceText.length; i++) {
+    const char = sourceText[i]
+    const charWidth = getTextWidth(char)
+    restTextWidth += charWidth
+    restText += char
+    // 中文时，需要单元格宽度减去16个文字宽度，否则会超出单元格宽度
+    const cWidth = char.charCodeAt(0) >= 128 ? 12 : 8
+    // 添加换行
+    if (restTextWidth >= cellWidth - textStyle.fontSize - cWidth) {
+      // 最后一个字符不添加换行符
+      resultWrapText += restText + (i !== sourceText.length - 1 ? '\n' : '')
+      restText = ''
+      restTextWidth = 0
+    }
+  }
+
+  resultWrapText += restText
+  return resultWrapText
+}
+/**
+ * 计算文本行高
+ * @param wrapText
+ * @param textStyle
+ * @param spreadsheet
+ * @param maxLines 最大行数
+ */
+const getWrapTextHeight = (wrapText, textStyle, spreadsheet, maxLines) => {
+  // 行内最高
+  let maxHeight = 0
+  // 获取最高字符的高度
+  for (const char of wrapText) {
+    const h = textStyle.fontSize / (char.charCodeAt(0) >= 128 ? 5 : 2.5)
+    maxHeight = Math.max(maxHeight, spreadsheet.measureTextHeight(char, textStyle) + h)
+  }
+  // 行数
+  const lines = wrapText.split('\n').length
+  return Math.min(lines, maxLines) * maxHeight
+}
+
+/**
+ * 设置汇总行
+ * @param chart
+ * @param s2Options
+ * @param newData
+ * @param tableHeader
+ * @param basicStyle
+ * @param showSummary
+ */
+export const configSummaryRow = (chart, s2Options, newData, tableHeader, basicStyle, showSummary) =>{
+  if (!showSummary || !newData.length) return
+  // 设置汇总行高度和表头一致
+  const heightByField = {}
+  heightByField[newData.length] = tableHeader.tableTitleHeight
+  s2Options.style.rowCfg = { heightByField }
+  // 计算汇总加入到数据里，冻结最后一行
+  s2Options.frozenTrailingRowCount = 1
+  const yAxis = chart.yAxis
+  const xAxis = chart.xAxis
+  const summaryObj = newData.reduce(
+    (p, n) => {
+      if (chart.type === 'table-info') {
+        xAxis
+          .filter(axis => [2, 3, 4].includes(axis.deType))
+          .forEach(axis => {
+            p[axis.dataeaseName] =
+              (parseFloat(n[axis.dataeaseName]) || 0) + (parseFloat(p[axis.dataeaseName]) || 0)
+          })
+      } else {
+        yAxis.forEach(axis => {
+          p[axis.dataeaseName] =
+            (parseFloat(n[axis.dataeaseName]) || 0) + (parseFloat(p[axis.dataeaseName]) || 0)
+        })
+      }
+      return p
+    },
+    { SUMMARY: true }
+  )
+  newData.push(summaryObj)
+  s2Options.dataCell = viewMeta => {
+    // 配置文本自动换行参数
+    viewMeta.autoWrap = basicStyle.autoWrap
+    viewMeta.maxLines = basicStyle.maxLines
+    if (viewMeta.rowIndex !== newData.length - 1) {
+      return new CustomDataCell(viewMeta, viewMeta.spreadsheet)
+    }
+    if (viewMeta.colIndex === 0) {
+      if (tableHeader.showIndex) {
+        viewMeta.fieldValue = basicStyle.summaryLabel ?? i18nt('chart.total_show')
+      } else {
+        if (xAxis.length) {
+          viewMeta.fieldValue = basicStyle.summaryLabel ?? i18nt('chart.total_show')
+        }
+      }
+    }
+    return new SummaryCell(viewMeta, viewMeta.spreadsheet)
+  }
+}
+
+/**
+ * 汇总行样式,紧贴在单元格后面
+ * @param newChart
+ * @param newData
+ * @param tableCell
+ * @param tableHeader
+ * @param showSummary
+ */
+export const summaryRowStyle = (newChart, newData, tableCell, tableHeader, showSummary) => {
+  if (!showSummary || !newData.length) return
+  newChart.on(S2Event.LAYOUT_BEFORE_RENDER, () => {
+    const showHeader = tableHeader.showTableHeader === true
+    // 不显示表头时，减少一个表头的高度
+    const headerAndSummaryHeight = showHeader ? 2 : 1
+    const totalHeight =
+      tableHeader.tableTitleHeight * headerAndSummaryHeight + tableCell.tableItemHeight * (newData.length - 1)
+    if (totalHeight < newChart.options.height) {
+      // 6 是阴影高度
+      newChart.options.height =
+        totalHeight < newChart.options.height - 6 ? totalHeight + 6 : totalHeight
+    }
+  })
+}
+
+export class SummaryCell extends CustomDataCell {
+  getTextStyle() {
+    const textStyle = cloneDeep(this.theme.colCell.bolderText)
+    textStyle.textAlign = this.theme.dataCell.text.textAlign
+    return textStyle
+  }
+  getBackgroundColor() {
+    const { backgroundColor, backgroundColorOpacity } = this.theme.colCell.cell
+    return { backgroundColor, backgroundColorOpacity }
+  }
+}
+
+/**
+ * 配置空数据样式
+ * @param newChart
+ * @param basicStyle
+ * @param newData
+ * @param container
+ */
+export const configEmptyDataStyle = (newChart, basicStyle, newData, container) => {
+  /**
+   * 辅助函数：移除空数据dom
+   */
+  const removeEmptyDom = () => {
+    const emptyElement = document.getElementById(container + '_empty')
+    if (emptyElement) {
+      emptyElement.parentElement.removeChild(emptyElement)
+    }
+  }
+  removeEmptyDom()
+  if (newData.length) return
+  newChart.on(S2Event.LAYOUT_AFTER_HEADER_LAYOUT, (ev) => {
+    removeEmptyDom()
+    if (!newData.length) {
+      const emptyDom = document.createElement('div')
+      const left = Math.min(newChart.options.width, ev.colsHierarchy.width) / 2 - 32
+      emptyDom.id = container + '_empty'
+      emptyDom.textContent = t('data_set.no_data')
+      emptyDom.setAttribute(
+        'style',
+        `position: absolute;
+        left: ${left}px;
+        top: 50%;`
+      )
+      const parent = document.getElementById(container)
+      parent.insertBefore(emptyDom, parent.firstChild)
+    }
+  })
 }

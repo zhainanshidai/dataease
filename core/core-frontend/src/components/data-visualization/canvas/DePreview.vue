@@ -83,6 +83,12 @@ const props = defineProps({
   showPopBar: {
     type: Boolean,
     default: false
+  },
+  // 字体
+  fontFamily: {
+    type: String,
+    required: false,
+    default: 'inherit'
   }
 })
 
@@ -97,7 +103,8 @@ const {
   downloadStatus,
   outerScale,
   outerSearchCount,
-  showPopBar
+  showPopBar,
+  fontFamily
 } = toRefs(props)
 const domId = 'preview-' + canvasId.value
 const scaleWidthPoint = ref(100)
@@ -141,9 +148,12 @@ const canvasStyle = computed(() => {
     style['overflowY'] = 'hidden !important'
   }
   if (canvasStyleData.value && canvasStyleData.value.width && isMainCanvas(canvasId.value)) {
-    style = {
-      ...getCanvasStyle(canvasStyleData.value),
-      height: dashboardActive.value
+    style = getCanvasStyle(canvasStyleData.value)
+    if (canvasStyleData.value?.screenAdaptor === 'keep') {
+      style['height'] = canvasStyleData.value?.height + 'px'
+      style['width'] = canvasStyleData.value?.width + 'px'
+    } else {
+      style['height'] = dashboardActive.value
         ? downloadStatus.value
           ? getDownloadStatusMainHeight()
           : '100%'
@@ -151,11 +161,11 @@ const canvasStyle = computed(() => {
           canvasStyleData.value?.screenAdaptor === 'widthFirst'
         ? changeStyleWithScale(canvasStyleData.value?.height, scaleMin.value) + 'px'
         : '100%'
+      style['width'] =
+        !dashboardActive.value && canvasStyleData.value?.screenAdaptor === 'heightFirst'
+          ? changeStyleWithScale(canvasStyleData.value?.width, scaleHeightPoint.value) + 'px'
+          : '100%'
     }
-    style['width'] =
-      !dashboardActive.value && canvasStyleData.value?.screenAdaptor === 'heightFirst'
-        ? changeStyleWithScale(canvasStyleData.value?.width, scaleHeightPoint.value) + 'px'
-        : '100%'
   }
   return style
 })
@@ -463,8 +473,9 @@ defineExpose({
         :style="getShapeItemShowStyle(item)"
         :show-position="showPosition"
         :search-count="curSearchCount"
-        :scale="mobileInPc ? 100 : scaleMin"
+        :scale="mobileInPc && isDashboard() ? 100 : scaleMin"
         :is-selector="props.isSelector"
+        :font-family="canvasStyleData.fontFamily || fontFamily"
         @userViewEnlargeOpen="userViewEnlargeOpen($event, item)"
         @datasetParamsInit="datasetParamsInit(item)"
         @onPointClick="onPointClick"

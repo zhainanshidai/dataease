@@ -2,12 +2,14 @@ package io.dataease.visualization.manage;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.dataease.api.visualization.vo.DataVisualizationVO;
+import io.dataease.chart.constant.ChartConstants;
 import io.dataease.chart.manage.ChartDataManage;
 import io.dataease.chart.manage.ChartViewManege;
 import io.dataease.constant.CommonConstants;
 import io.dataease.dataset.server.DatasetFieldServer;
 import io.dataease.engine.constant.DeTypeConstants;
 import io.dataease.exception.DEException;
+import io.dataease.exportCenter.util.ExportCenterUtils;
 import io.dataease.extensions.view.dto.ChartExtFilterDTO;
 import io.dataease.extensions.view.dto.ChartExtRequest;
 import io.dataease.extensions.view.dto.ChartViewDTO;
@@ -139,6 +141,11 @@ public class CoreVisualizationExportManage {
 
         ChartViewDTO chartViewDTO = null;
         request.setIsExcelExport(true);
+        String type = request.getType();
+        if (StringUtils.equals("table-info", type)) {
+            request.setResultCount(Math.toIntExact(ExportCenterUtils.getExportLimit("view")));
+            request.setResultMode(ChartConstants.VIEW_RESULT_MODE.ALL);
+        }
         if (CommonConstants.VIEW_DATA_FROM.TEMPLATE.equalsIgnoreCase(request.getDataFrom())) {
             chartViewDTO = extendDataManage.getChartDataInfo(request.getId(), request);
         } else {
@@ -186,14 +193,14 @@ public class CoreVisualizationExportManage {
         List<Map<String, Object>> components = JsonUtil.parseList(componentsJson, tokenType);
         Map<String, ChartExtRequest> result = new HashMap<>();
         Map<String, List<ChartExtFilterDTO>> panelFilters = FilterBuildTemplate.buildEmpty(components);
-        // List<String> tableInfoViewIds = findTableInfoViewIds(components);
         for (Map.Entry<String, List<ChartExtFilterDTO>> entry : panelFilters.entrySet()) {
             List<ChartExtFilterDTO> chartExtFilterRequests = entry.getValue();
             ChartExtRequest chartExtRequest = new ChartExtRequest();
             chartExtRequest.setQueryFrom("panel");
             chartExtRequest.setFilter(chartExtFilterRequests);
-            chartExtRequest.setResultCount((int) 1000);
-            chartExtRequest.setResultMode("all");
+            chartExtRequest.setResultCount(Math.toIntExact(ExportCenterUtils.getExportLimit("view")));
+            chartExtRequest.setResultMode(ChartConstants.VIEW_RESULT_MODE.ALL);
+            chartExtRequest.setPageSize(ExportCenterUtils.getExportLimit("view"));
             result.put(entry.getKey(), chartExtRequest);
         }
         return result;

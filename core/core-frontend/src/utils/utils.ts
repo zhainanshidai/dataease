@@ -136,6 +136,10 @@ export function isMobile() {
   )
 }
 
+export function isISOMobile() {
+  return navigator.userAgent.match(/(iPhone|iPad|iPod)/i) && !isTablet()
+}
+
 export const isDingTalk = window.navigator.userAgent.toLowerCase().includes('dingtalk')
 
 export const setTitle = (title?: string) => {
@@ -187,4 +191,37 @@ export const isLink = () => {
 
 export const isNull = arg => {
   return typeof arg === 'undefined' || arg === null || arg === 'null'
+}
+
+export const exportPermission = (weight, ext) => {
+  const result = [0, 0, 0]
+  if (!weight || weight === 1) {
+    return result
+  } else if (weight === 9) {
+    return [1, 1, 1]
+  }
+  if (!ext) {
+    return result
+  }
+  const extArray = formatExt(ext) || []
+  for (let index = 0; index < extArray.length; index++) {
+    result[index] = extArray[index]
+  }
+  return result
+}
+
+export const formatExt = (num: number): number[] | null => {
+  if (!num) {
+    return null
+  }
+  const reversedStr = num.toString().split('').reverse().join('')
+  const reversedNumArray = reversedStr?.split('')?.map(Number) ?? []
+  return reversedNumArray
+}
+
+export const getBrowserLocale = () => {
+  return navigator.language
+}
+export const getLocale = () => {
+  return wsCache.get('user.language') || getBrowserLocale() || 'zh-CN'
 }

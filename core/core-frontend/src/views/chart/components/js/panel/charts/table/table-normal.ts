@@ -1,9 +1,11 @@
 import { useI18n } from '@/hooks/web/useI18n'
 import { formatterItem, valueFormatter } from '@/views/chart/components/js/formatter'
 import {
+  configEmptyDataStyle,
+  configSummaryRow,
   copyContent,
-  CustomDataCell,
-  SortTooltip
+  SortTooltip,
+  summaryRowStyle
 } from '@/views/chart/components/js/panel/common/common_table'
 import { S2ChartView, S2DrawOptions } from '@/views/chart/components/js/panel/types/impl/s2'
 import { parseJson } from '@/views/chart/components/js/util'
@@ -12,6 +14,7 @@ import {
   S2DataConfig,
   S2Event,
   S2Options,
+  ScrollbarPositionType,
   TableColCell,
   TableSheet,
   ViewMeta
@@ -144,7 +147,10 @@ export class TableNormal extends S2ChartView<TableSheet> {
         renderTooltip: sheet => new SortTooltip(sheet)
       },
       interaction: {
-        hoverHighlight: !(basicStyle.showHoverStyle === false)
+        hoverHighlight: !(basicStyle.showHoverStyle === false),
+        scrollbarPosition: newData.length
+          ? ScrollbarPositionType.CONTENT
+          : ScrollbarPositionType.CANVAS
       }
     }
     // 列宽设置
@@ -189,56 +195,11 @@ export class TableNormal extends S2ChartView<TableSheet> {
     }
 
     // 总计
-    if (basicStyle.showSummary) {
-      // 设置汇总行高度和表头一致
-      const heightByField = {}
-      heightByField[newData.length] = tableHeader.tableTitleHeight
-      s2Options.style.rowCfg = { heightByField }
-      // 计算汇总加入到数据里，冻结最后一行
-      s2Options.frozenTrailingRowCount = 1
-      const yAxis = chart.yAxis
-      const xAxis = chart.xAxis
-      const summaryObj = newData.reduce(
-        (p, n) => {
-          yAxis.forEach(axis => {
-            p[axis.dataeaseName] =
-              (parseFloat(n[axis.dataeaseName]) || 0) + (parseFloat(p[axis.dataeaseName]) || 0)
-          })
-          return p
-        },
-        { SUMMARY: true }
-      )
-      newData.push(summaryObj)
-      s2Options.dataCell = viewMeta => {
-        if (viewMeta.rowIndex !== newData.length - 1) {
-          return new CustomDataCell(viewMeta, viewMeta.spreadsheet)
-        }
-        if (viewMeta.colIndex === 0) {
-          if (tableHeader.showIndex) {
-            viewMeta.fieldValue = basicStyle.summaryLabel ?? '总计'
-          } else {
-            if (xAxis.length) {
-              viewMeta.fieldValue = basicStyle.summaryLabel ?? '总计'
-            }
-          }
-        }
-        return new SummaryCell(viewMeta, viewMeta.spreadsheet)
-      }
-    }
+    configSummaryRow(chart, s2Options, newData, tableHeader, basicStyle, basicStyle.showSummary)
     // 开始渲染
     const newChart = new TableSheet(containerDom, s2DataConfig, s2Options)
     // 总计紧贴在单元格后面
-    if (basicStyle.showSummary) {
-      newChart.on(S2Event.LAYOUT_BEFORE_RENDER, () => {
-        const totalHeight =
-          tableHeader.tableTitleHeight * 2 + tableCell.tableItemHeight * (newData.length - 1)
-        if (totalHeight < newChart.options.height) {
-          // 6 是阴影高度
-          newChart.options.height =
-            totalHeight < newChart.options.height - 6 ? totalHeight + 6 : totalHeight
-        }
-      })
-    }
+    summaryRowStyle(newChart, newData, tableCell, tableHeader, basicStyle.showSummary)
     // 自适应铺满
     if (basicStyle.tableColumnMode === 'adapt') {
       newChart.on(S2Event.LAYOUT_RESIZE_COL_WIDTH, () => {
@@ -286,6 +247,7 @@ export class TableNormal extends S2ChartView<TableSheet> {
         ev.colsHierarchy.width = containerWidth
       })
     }
+    configEmptyDataStyle(newChart, basicStyle, newData, container)
     // click
     newChart.on(S2Event.DATA_CELL_CLICK, ev => {
       const cell = newChart.getCell(ev.target)
@@ -332,17 +294,5 @@ export class TableNormal extends S2ChartView<TableSheet> {
   }
   constructor() {
     super('table-normal', [])
-  }
-}
-
-class SummaryCell extends CustomDataCell {
-  getTextStyle() {
-    const textStyle = cloneDeep(this.theme.colCell.bolderText)
-    textStyle.textAlign = this.theme.dataCell.text.textAlign
-    return textStyle
-  }
-  getBackgroundColor() {
-    const { backgroundColor, backgroundColorOpacity } = this.theme.colCell.cell
-    return { backgroundColor, backgroundColorOpacity }
   }
 }

@@ -32,4 +32,6 @@ public class BusiNodeVO implements TreeResultModel<BusiNodeVO>, Serializable {
     private String type;
     @Schema(description = "子节点")
     private List<BusiNodeVO> children;
+    @Schema(description = "独立权重")
+    private Integer ext;
 }

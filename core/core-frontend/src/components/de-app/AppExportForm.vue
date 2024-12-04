@@ -1,6 +1,6 @@
 <template>
   <el-drawer
-    :title="'应用导出'"
+    :title="t('visualization.app_export')"
     v-model="state.applyDownloadDrawer"
     custom-class="de-user-drawer"
     size="600px"
@@ -15,21 +15,25 @@
         label-width="180px"
         label-position="top"
       >
-        <el-form-item :label="'应用名称'" prop="appName">
-          <el-input v-model="state.form.appName" autocomplete="off" :placeholder="'请输入名称'" />
+        <el-form-item :label="t('visualization.app_name')" prop="appName">
+          <el-input
+            v-model="state.form.appName"
+            autocomplete="off"
+            :placeholder="t('common.input_name')"
+          />
         </el-form-item>
-        <el-form-item :label="'应用版本号'" prop="version">
+        <el-form-item :label="t('visualization.app_version')" prop="version">
           <el-input v-model="state.form.version" autocomplete="off" />
         </el-form-item>
-        <el-form-item :label="'DataEase最低版本号'" prop="required">
+        <el-form-item :label="t('visualization.app_export')" prop="required">
           <el-input v-model="state.form.required" autocomplete="off" />
         </el-form-item>
-        <el-form-item :label="'作者'" prop="creator">
+        <el-form-item :label="t('visualization.creator')" prop="creator">
           <el-input v-model="state.form.creator" autocomplete="off" />
         </el-form-item>
-        <el-form-item :label="'描述'" prop="description">
+        <el-form-item :label="t('visualization.description')" prop="description">
           <el-input
-            :placeholder="'请输入内容'"
+            :placeholder="t('commons.input_content')"
             show-word-limit
             v-model="state.form.description"
             type="textarea"
@@ -39,8 +43,8 @@
     </div>
     <template #footer>
       <div class="apply" style="width: 100%">
-        <el-button secondary @click="close">{{ $t('commons.cancel') }} </el-button>
-        <el-button type="primary" @click="downloadApp">导出</el-button>
+        <el-button secondary @click="close">{{ t('commons.cancel') }} </el-button>
+        <el-button type="primary" @click="downloadApp">{{ t('chart.export') }}</el-button>
       </div>
     </template>
   </el-drawer>

@@ -1,5 +1,12 @@
 <script lang="ts" setup>
-import { shallowRef, defineAsyncComponent, ref, onBeforeUnmount, onBeforeMount } from 'vue'
+import {
+  shallowRef,
+  defineAsyncComponent,
+  ref,
+  onBeforeUnmount,
+  onBeforeMount,
+  nextTick
+} from 'vue'
 import { debounce } from 'lodash-es'
 import { XpackComponent } from '@/components/plugin'
 import { useEmitt } from '@/hooks/web/useEmitt'
@@ -21,6 +28,8 @@ const ScreenPanel = defineAsyncComponent(() => import('@/views/data-visualizatio
 const DashboardPanel = defineAsyncComponent(
   () => import('@/views/dashboard/DashboardPreviewShow.vue')
 )
+
+const AsyncXpackComponent = defineAsyncComponent(() => import('@/components/plugin/src/index.vue'))
 
 const componentMap = {
   DashboardEditor,
@@ -47,8 +56,28 @@ onBeforeMount(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', setStyle)
 })
+
+const showComponent = ref(false)
+const dataFillingPath = ref('')
+
 const initIframe = (name: string) => {
-  currentComponent.value = componentMap[name || 'ViewWrapper']
+  showComponent.value = false
+  if (name && name.includes('DataFilling')) {
+    if (name === 'DataFilling') {
+      dataFillingPath.value = 'L21lbnUvZGF0YS9kYXRhLWZpbGxpbmcvbWFuYWdlL2luZGV4'
+    } else if (name === 'DataFillingEditor') {
+      dataFillingPath.value = 'L21lbnUvZGF0YS9kYXRhLWZpbGxpbmcvbWFuYWdlL2Zvcm0vaW5kZXg='
+    } else if (name === 'DataFillingHandler') {
+      dataFillingPath.value = 'L21lbnUvZGF0YS9kYXRhLWZpbGxpbmcvZmlsbC9UYWJQYW5lVGFibGU='
+    }
+    nextTick(() => {
+      currentComponent.value = AsyncXpackComponent
+      showComponent.value = true
+    })
+  } else {
+    currentComponent.value = componentMap[name || 'ViewWrapper']
+    showComponent.value = true
+  }
 }
 
 useEmitt({
@@ -63,6 +92,6 @@ useEmitt({
     @init-iframe="initIframe"
   />
   <div :style="iframeStyle">
-    <component :is="currentComponent"></component>
+    <component :is="currentComponent" :jsname="dataFillingPath" v-if="showComponent"></component>
   </div>
 </template>

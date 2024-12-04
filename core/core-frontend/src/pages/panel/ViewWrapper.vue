@@ -26,7 +26,7 @@ const state = reactive({
   canvasStylePreview: null,
   canvasViewInfoPreview: null,
   dvInfo: null,
-  chartId: null,
+  dvId: null,
   suffixId: 'common',
   initState: true
 })
@@ -41,7 +41,7 @@ const winMsgHandle = event => {
   if (
     msgInfo &&
     msgInfo.type === 'attachParams' &&
-    msgInfo.targetSourceId === state.chartId + '' &&
+    msgInfo.targetSourceId === state.dvId + '' &&
     (!msgInfo.suffixId || msgInfo.suffixId === state.suffixId)
   ) {
     const attachParams = msgInfo.params
@@ -65,7 +65,7 @@ onBeforeMount(async () => {
   if (!checkResult) {
     return
   }
-  state.chartId = embeddedParams.dvId
+  state.dvId = embeddedParams.dvId
   state.suffixId = embeddedParams.suffixId || 'common'
   window.addEventListener('message', winMsgHandle)
 
@@ -112,15 +112,23 @@ onBeforeMount(async () => {
         if (ele.id === chartId) {
           config.value = ele
           return true
-        }
-
-        if (ele.component === 'Group') {
+        } else if (ele.component === 'Group') {
           return (ele.propValue || []).some(itx => {
             if (itx.id === chartId) {
               config.value = itx
               return true
             }
             return false
+          })
+        } else if (ele.component === 'DeTabs') {
+          ele.propValue.forEach(tabItem => {
+            return (tabItem.componentData || []).some(itx => {
+              if (itx.id === chartId) {
+                config.value = itx
+                return true
+              }
+              return false
+            })
           })
         }
         return false

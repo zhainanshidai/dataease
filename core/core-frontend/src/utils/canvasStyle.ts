@@ -1,12 +1,15 @@
 import { cos, sin } from '@/utils/translate'
 import {
+  CHART_FONT_FAMILY_MAP,
+  CHART_FONT_FAMILY_MAP_TRANS,
   DEFAULT_COLOR_CASE,
-  DEFAULT_COLOR_CASE_DARK
+  DEFAULT_COLOR_CASE_DARK,
+  DEFAULT_INDICATOR_STYLE
 } from '@/views/chart/components/editor/util/chart'
 
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { useEmitt } from '@/hooks/web/useEmitt'
-import { merge } from 'lodash-es'
+import { defaultTo, merge } from 'lodash-es'
 const dvMainStore = dvMainStoreWithOut()
 
 export const LIGHT_THEME_COLOR_MAIN = '#000000'
@@ -113,7 +116,7 @@ export function colorRgb(color, opacity) {
 }
 
 export const customAttrTrans = {
-  basicStyle: ['barWidth', 'lineWidth', 'lineSymbolSize'],
+  basicStyle: ['barWidth', 'lineWidth', 'lineSymbolSize', 'tableColumnWidth'],
   tableHeader: ['tableTitleFontSize', 'tableTitleHeight'],
   tableCell: ['tableItemFontSize', 'tableItemHeight'],
   misc: [
@@ -127,7 +130,8 @@ export const customAttrTrans = {
   ],
   label: {
     fontSize: '',
-    seriesLabelFormatter: ['fontSize']
+    seriesLabelFormatter: ['fontSize'],
+    proportionSeriesFormatter: ['fontSize']
   },
   tooltip: {
     fontSize: '',
@@ -419,6 +423,48 @@ export function adaptCurTheme(customStyle, customAttr) {
     remarkShow: customStyle['text']['remarkShow'],
     remark: customStyle['text']['remark']
   }
+}
+
+export function adaptTitleFontFamily(fontFamily, viewInfo) {
+  if (viewInfo) {
+    const _fontFamily = defaultTo(CHART_FONT_FAMILY_MAP_TRANS[fontFamily], fontFamily)
+    viewInfo.customStyle['text']['fontFamily'] = _fontFamily
+    //针对指标卡设置字体
+    if (viewInfo.type === 'indicator') {
+      viewInfo.customAttr['indicator']['fontFamily'] = fontFamily
+      viewInfo.customAttr['indicator']['suffixFontFamily'] = fontFamily
+      viewInfo.customAttr['indicatorName']['fontFamily'] = fontFamily
+    }
+  }
+}
+
+export function adaptTitleFontFamilyAll(fontFamily) {
+  const componentData = dvMainStore.componentData
+  componentData.forEach(item => {
+    if (item.component === 'UserView') {
+      const viewDetails = dvMainStore.canvasViewInfo[item.id]
+      adaptTitleFontFamily(fontFamily, viewDetails)
+      useEmitt().emitter.emit('renderChart-' + item.id, viewDetails)
+    } else if (item.component === 'Group') {
+      item.propValue.forEach(groupItem => {
+        if (groupItem.component === 'UserView') {
+          const viewDetails = dvMainStore.canvasViewInfo[groupItem.id]
+          adaptTitleFontFamily(fontFamily, viewDetails)
+          useEmitt().emitter.emit('renderChart-' + groupItem.id, viewDetails)
+        }
+      })
+    } else if (item.component === 'DeTabs') {
+      item.propValue.forEach(tabItem => {
+        tabItem.componentData.forEach(tabComponent => {
+          if (tabComponent.component === 'UserView') {
+            const viewDetails = dvMainStore.canvasViewInfo[tabComponent.id]
+            adaptTitleFontFamily(fontFamily, viewDetails)
+            useEmitt().emitter.emit('renderChart-' + tabComponent.id, viewDetails)
+          }
+        })
+      })
+    }
+  })
 }
 
 export function adaptCurThemeCommonStyle(component) {

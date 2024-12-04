@@ -106,6 +106,18 @@ export class SymbolicMap extends L7ChartView<Scene, L7Config> {
     if (basicStyle.autoFit === false) {
       center = [basicStyle.mapCenter.longitude, basicStyle.mapCenter.latitude]
     }
+    // 联动时，聚焦到数据点，多个取第一个
+    if (
+      chart.chartExtRequest?.linkageFilters?.length &&
+      xAxis?.length === 2 &&
+      chart.data?.tableRow.length
+    ) {
+      // 经度
+      const lng = chart.data?.tableRow?.[0][chart.xAxis[0].dataeaseName]
+      // 纬度
+      const lat = chart.data?.tableRow?.[0][chart.xAxis[1].dataeaseName]
+      center = [lng, lat]
+    }
     const chartObj = drawOption.chartObj as unknown as L7Wrapper<L7Config, Scene>
     let scene = chartObj?.getScene()
     if (!scene) {
@@ -382,7 +394,7 @@ export class SymbolicMap extends L7ChartView<Scene, L7Config> {
           }
         `
       document.head.appendChild(style)
-      const htmlPrefix = `<div style='font-size:${tooltip.fontSize}px;color:${tooltip.color}'>`
+      const htmlPrefix = `<div style='font-size:${tooltip.fontSize}px;color:${tooltip.color};font-family: ${chart.fontFamily}'>`
       const htmlSuffix = '</div>'
       const containerElement = document.getElementById(container)
       if (containerElement) {
@@ -510,7 +522,8 @@ export class SymbolicMap extends L7ChartView<Scene, L7Config> {
           .style({
             textAllowOverlap: label.fullDisplay,
             textAnchor: 'center',
-            textOffset: [0, 0]
+            textOffset: [0, 0],
+            fontFamily: chart.fontFamily ? chart.fontFamily : undefined
           })
       )
     }

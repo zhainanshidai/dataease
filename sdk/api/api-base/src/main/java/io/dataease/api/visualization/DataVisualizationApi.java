@@ -41,7 +41,7 @@ public interface DataVisualizationApi {
 
     @GetMapping("/findCopyResource/{dvId}/{busiFlag}")
     @Operation(summary = "查询临时复制资源")
-    DataVisualizationVO findCopyResource(@PathVariable("dvId") Long dvId,@PathVariable("busiFlag") String busiFlag);
+    DataVisualizationVO findCopyResource(@PathVariable("dvId") Long dvId, @PathVariable("busiFlag") String busiFlag);
 
 
     @PostMapping("/saveCanvas")
@@ -52,6 +52,11 @@ public interface DataVisualizationApi {
     @PostMapping("/appCanvasNameCheck")
     @Operation(summary = "应用名称检查")
     String appCanvasNameCheck(@RequestBody DataVisualizationBaseRequest request) throws Exception;
+
+    @PostMapping("/checkCanvasChange")
+    @DePermit(value = {"#p0.id + ':manage'"}, busiFlag = "#p0.type")
+    @Operation(summary = "画布变动校验")
+    String checkCanvasChange(@RequestBody DataVisualizationBaseRequest request);
 
 
     @PostMapping("/updateCanvas")
@@ -64,10 +69,10 @@ public interface DataVisualizationApi {
     @Operation(summary = "可视化资源基础信息更新")
     void updateBase(@RequestBody DataVisualizationBaseRequest request);
 
-    @DeleteMapping("/deleteLogic/{dvId}/{busiFlag}")
+    @PostMapping("/deleteLogic/{dvId}/{busiFlag}")
     @DePermit(value = {"#p0+':manage'"}, busiFlag = "#p1")
     @Operation(summary = "可视化资源删除")
-    void deleteLogic(@PathVariable("dvId") Long dvId,@PathVariable("busiFlag") String busiFlag);
+    void deleteLogic(@PathVariable("dvId") Long dvId, @PathVariable("busiFlag") String busiFlag);
 
     @PostMapping("/tree")
     @Operation(summary = "查询可视化资源树")
@@ -98,7 +103,13 @@ public interface DataVisualizationApi {
 
     @GetMapping("/findDvType/{dvId}")
     @Operation(summary = "查询可视化资源类型")
-    String findDvType(@PathVariable("dvId")Long dvId);
+    String findDvType(@PathVariable("dvId") Long dvId);
+
+
+    @GetMapping("/updateCheckVersion/{dvId}")
+    @Operation(summary = "更新校验版本")
+    String updateCheckVersion(@PathVariable("dvId") Long dvId);
+
 
     /**
      * 从模板解压可视化资源 模板来源包括 模板市场、内部模板管理

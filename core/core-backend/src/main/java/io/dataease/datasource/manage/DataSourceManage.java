@@ -19,6 +19,7 @@ import io.dataease.model.BusiNodeVO;
 import io.dataease.operation.manage.CoreOptRecentManage;
 import io.dataease.utils.AuthUtils;
 import io.dataease.utils.BeanUtils;
+import io.dataease.utils.CommunityUtils;
 import io.dataease.utils.TreeUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
@@ -53,15 +54,19 @@ public class DataSourceManage {
         }
         Integer flag = dataSourceType.getFlag();
         int extraFlag = StringUtils.equalsIgnoreCase("error", po.getStatus()) ? Math.negateExact(flag) : flag;
-        return new DatasourceNodeBO(po.getId(), po.getName(), !StringUtils.equals(po.getType(), "folder"), 7, po.getPid(), extraFlag, dataSourceType.name());
+        return new DatasourceNodeBO(po.getId(), po.getName(), !StringUtils.equals(po.getType(), "folder"), 9, po.getPid(), extraFlag, dataSourceType.name());
     }
 
-    @XpackInteract(value = "datasourceResourceTree", replace = true)
+    @XpackInteract(value = "datasourceResourceTree", replace = true, invalid = true)
     public List<BusiNodeVO> tree(BusiNodeRequest request) {
 
         QueryWrapper<DataSourceNodePO> queryWrapper = new QueryWrapper<>();
         if (ObjectUtils.isNotEmpty(request.getLeaf()) && !request.getLeaf()) {
             queryWrapper.eq("type", "folder");
+        }
+        String info = CommunityUtils.getInfo();
+        if (StringUtils.isNotBlank(info)) {
+            queryWrapper.notExists(String.format(info, "core_datasource.id"));
         }
         queryWrapper.orderByDesc("create_time");
         List<DatasourceNodeBO> nodes = new ArrayList<>();
@@ -135,7 +140,7 @@ public class DataSourceManage {
     public void move(DatasourceDTO dataSourceDTO) {
         Long id = dataSourceDTO.getId();
         CoreDatasource sourceData = null;
-        if (ObjectUtils.isEmpty(id) || ObjectUtils.isEmpty(sourceData = coreDatasourceMapper.selectById(id))) {
+        if (ObjectUtils.isEmpty(id) || ObjectUtils.isEmpty(sourceData = getCoreDatasource(id))) {
             DEException.throwException("resource not exist");
         }
         checkName(dataSourceDTO);
@@ -151,8 +156,20 @@ public class DataSourceManage {
         coreOptRecentManage.saveOpt(sourceData.getId(), OptConstants.OPT_RESOURCE_TYPE.DATASOURCE, OptConstants.OPT_TYPE.UPDATE);
     }
 
+
+    public void encryptDsConfig() {
+        coreDatasourceMapper.selectList(null).forEach(dataSource -> {
+            coreDatasourceMapper.updateById(dataSource);
+        });
+    }
+
+    @XpackInteract(value = "datasourceResourceTree", before = false)
+    public CoreDatasource getCoreDatasource(Long id) {
+        return coreDatasourceMapper.selectById(id);
+    }
+
     public DatasourceDTO getDs(Long id) {
-        CoreDatasource coreDatasource = coreDatasourceMapper.selectById(id);
+        CoreDatasource coreDatasource = getCoreDatasource(id);
         DatasourceDTO dto = new DatasourceDTO();
         BeanUtils.copyBean(dto, coreDatasource);
         return dto;

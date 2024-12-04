@@ -42,9 +42,7 @@ const demoTips = computed(() => {
   if (!showDempTips.value) {
     return ''
   }
-  return (
-    appearanceStore.getDemoTipsContent || '账号：admin 密码：DataEase@123456 每晚 00:00 重置数据'
-  )
+  return appearanceStore.getDemoTipsContent || ''
 })
 const state = reactive({
   loginForm: {
@@ -53,24 +51,6 @@ const state = reactive({
   },
   footContent: ''
 })
-const checkUsername = value => {
-  if (!value) {
-    return true
-  }
-  const pattern = /^[a-zA-Z0-9][a-zA-Z0-9\@._-]*$/
-  const reg = new RegExp(pattern)
-  return reg.test(value)
-}
-
-const validatePwd = value => {
-  if (!value) {
-    return true
-  }
-  const pattern =
-    /^.*(?=.{6,20})(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[~!@#$%^&*()_+\-\={}|":<>?`[\];',.\/])[a-zA-Z0-9~!@#$%^&*()_+\-\={}|":<>?`[\];',.\/]*$/
-  const regep = new RegExp(pattern)
-  return regep.test(value)
-}
 
 const rules = reactive<FormRules>({
   username: [{ required: true, message: t('common.required'), trigger: 'blur' }],
@@ -93,10 +73,10 @@ const handleLogin = () => {
   if (!formRef.value) return
   formRef.value.validate(async (valid: boolean) => {
     if (valid) {
-      if (!checkUsername(state.loginForm.username) || !validatePwd(state.loginForm.password)) {
+      /* if (!checkUsername(state.loginForm.username) || !validatePwd(state.loginForm.password)) {
         ElMessage.error('用户名或密码错误')
         return
-      }
+      } */
       const name = state.loginForm.username.trim()
       const pwd = state.loginForm.password
       if (!wsCache.get(appStore.getDekey)) {
@@ -111,6 +91,7 @@ const handleLogin = () => {
           const { token, exp } = res.data
           userStore.setToken(token)
           userStore.setExp(exp)
+          userStore.setTime(Date.now())
           if (!xpackLoadFail.value && xpackInvalidPwd.value?.invokeMethod) {
             const param = {
               methodName: 'init'

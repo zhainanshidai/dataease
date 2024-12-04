@@ -326,6 +326,26 @@ declare interface ChartBasicStyle {
    * 表格鼠标悬浮样式
    */
   showHoverStyle: boolean
+  /**
+   * 明细表单元格自动换行
+   */
+  autoWrap: boolean
+  /**
+   * 最大行数
+   */
+  maxLines?: number
+  /**
+   * 雷达图辅助点
+   */
+  radarShowPoint: boolean
+  /**
+   * 雷达图辅助点大小
+   */
+  radarPointSize: number
+  /**
+   * 雷达图面积颜色开关
+   */
+  radarAreaColor: boolean
 }
 /**
  * 表头属性
@@ -938,6 +958,10 @@ declare interface ChartLabelAttr {
    * 全部显示
    */
   fullDisplay: boolean
+  /**
+   * 仪表盘占比显示格式
+   */
+  proportionSeriesFormatter: SeriesFormatter
 }
 /**
  * 提示设置

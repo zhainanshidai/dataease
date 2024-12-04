@@ -94,7 +94,7 @@
                 class="image-hint"
                 :class="`image-hint_${themes}`"
               >
-                支持JPG、PNG、GIF、SVG，大小不超过 1M
+                {{ t('visualization.pic_import_tips', ['1M']) }}
               </span>
               <el-button
                 size="small"
@@ -104,7 +104,7 @@
                 @click="goFile"
                 :disabled="!canvasStyleData.mobileSetting.backgroundImageEnable"
               >
-                重新上传
+                {{ t('visualization.re_upload') }}
               </el-button>
             </el-row>
           </div>
@@ -159,7 +159,7 @@ const goFile = () => {
 }
 
 const sizeMessage = () => {
-  ElMessage.success('图片大小不符合')
+  ElMessage.success(t('visualization.pic_size_error'))
 }
 
 const reUpload = e => {

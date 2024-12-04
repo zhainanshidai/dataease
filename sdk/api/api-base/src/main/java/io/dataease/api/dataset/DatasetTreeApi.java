@@ -1,6 +1,7 @@
 package io.dataease.api.dataset;
 
 import com.github.xiaoymin.knife4j.annotations.ApiSupport;
+import io.dataease.api.dataset.dto.DataSetExportRequest;
 import io.dataease.api.dataset.dto.DatasetNodeDTO;
 import io.dataease.api.dataset.union.DatasetGroupInfoDTO;
 import io.dataease.api.dataset.vo.DataSetBarVO;
@@ -10,7 +11,6 @@ import io.dataease.extensions.datasource.dto.DatasetTableDTO;
 import io.dataease.extensions.view.dto.SqlVariableDetails;
 import io.dataease.model.BusiNodeRequest;
 import io.dataease.model.BusiNodeVO;
-import io.dataease.api.dataset.dto.DataSetExportRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -98,7 +98,8 @@ public interface DatasetTreeApi {
     @PostMapping("detailWithPerm")
     List<DatasetTableDTO> detailWithPerm(@RequestBody List<Long> ids) throws Exception;
 
+    @DePermit(value = {"#p0.id+':export'"})
     @Operation(summary = "数据集导出")
     @PostMapping("/exportDataset")
-    public void exportDataset(@RequestBody DataSetExportRequest request)  throws Exception;
+    void exportDataset(@RequestBody DataSetExportRequest request) throws Exception;
 }

@@ -11,7 +11,7 @@
     }"
   >
     <div class="bar-first">
-      <el-tooltip :content="state.barActive ? '收起' : '展开'">
+      <el-tooltip :content="state.barActive ? t('visualization.fold') : t('visualization.expand')">
         <el-icon style="width: 16px; height: 16px" @click="firstBarClick">
           <Icon name="icon_down_right_outlined" v-if="state.barActive">
             <icon_down_right_outlined />
@@ -25,7 +25,7 @@
     <div class="bar-content">
       <div class="bar-diver" />
       <div v-show="fromLink" class="link-icon-active">
-        <el-tooltip content="返回上一级">
+        <el-tooltip :content="t('visualization.back_parent')">
           <el-icon style="width: 16px; height: 16px" @click="back2Last">
             <Icon name="icon_left_outlined">
               <icon_left_outlined class="svg-icon" />
@@ -34,7 +34,7 @@
         </el-tooltip>
       </div>
       <div class="link-icon-active">
-        <el-tooltip content="导出PDF">
+        <el-tooltip :content="t('visualization.export_pdf')">
           <el-icon style="width: 16px; height: 16px" @click="exportPDF">
             <Icon name="icon_download_outlined">
               <icon_download_outlined class="svg-icon" />
@@ -43,7 +43,11 @@
         </el-tooltip>
       </div>
       <div id="fullscreenElement" class="link-icon-active" style="padding-right: 4px">
-        <el-tooltip :content="fullscreenFlag ? '退出全屏' : '全屏'">
+        <el-tooltip
+          :content="
+            fullscreenFlag ? t('visualization.ext_fullscreen') : t('visualization.fullscreen')
+          "
+        >
           <el-icon style="width: 16px; height: 16px" @click="toggleFullscreen">
             <Icon name="icon_minify_outlined" v-if="fullscreenFlag">
               <icon_minify_outlined class="svg-icon" />
@@ -72,6 +76,7 @@ import icon_magnify_outlined from '@/assets/svg/icon_magnify_outlined.svg'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { storeToRefs } from 'pinia'
+import { useI18n } from '@/hooks/web/useI18n'
 const dvMainStore = dvMainStoreWithOut()
 const props = defineProps({
   canvasStyleData: {
@@ -82,6 +87,7 @@ const props = defineProps({
 
 const { canvasStyleData } = toRefs(props)
 const { fullscreenFlag } = storeToRefs(dvMainStore)
+const { t } = useI18n()
 
 const state = reactive({
   fullscreenElement: null,
@@ -122,7 +128,7 @@ const back2Last = () => {
   window.location.reload()
 }
 const exportPDF = () => {
-  useEmitt().emitter.emit('canvasDownload')
+  useEmitt().emitter.emit('canvasDownload', 'pdf')
 }
 </script>
 

@@ -113,7 +113,8 @@ watch(
 
 const currentPlaceholder = ref()
 const currentSearch = ref({
-  placeholder: ''
+  placeholder: '',
+  queryConditionWidth: 227
 })
 
 const handleCurrentPlaceholder = val => {
@@ -124,6 +125,10 @@ const handleCurrentPlaceholder = val => {
   }
   if (obj.placeholder === undefined) {
     obj.placeholder = ''
+  }
+
+  if (obj.queryConditionWidth === undefined) {
+    obj.queryConditionWidth = 227
   }
   currentSearch.value = obj
   snapshotStore.recordSnapshotCacheToMobile('propValue')
@@ -278,7 +283,7 @@ initParams()
               />
             </el-form-item>
             <el-form-item
-              label="标题颜色"
+              :label="t('components.title_color')"
               class="form-item"
               style="padding-left: 20px"
               :class="'form-item-' + themes"
@@ -292,15 +297,82 @@ initParams()
                 :predefine="COLOR_PANEL"
               />
             </el-form-item>
+
+            <el-form-item class="form-item margin-bottom-8" :class="'form-item-' + themes">
+              <el-checkbox
+                size="small"
+                :effect="themes"
+                v-model="commonBackgroundPop.backdropFilterEnable"
+              >
+                {{ $t('chart.backdrop_blur') }}
+              </el-checkbox>
+            </el-form-item>
+            <el-form-item
+              style="padding-left: 20px"
+              class="form-item margin-bottom-8"
+              :class="'form-item-' + themes"
+            >
+              <el-input-number
+                style="width: 100%"
+                :effect="themes"
+                controls-position="right"
+                size="middle"
+                :min="0"
+                :max="30"
+                :disabled="!commonBackgroundPop.backdropFilterEnable"
+                v-model="commonBackgroundPop.backdropFilter"
+              />
+            </el-form-item>
+
             <el-form-item class="form-item margin-bottom-8" :class="'form-item-' + themes">
               <el-checkbox
                 :effect="themes"
                 size="small"
                 v-model="commonBackgroundPop.backgroundColorSelect"
               >
-                自定义组件背景
+                {{ t('visualization.custom_bg_color') }}
               </el-checkbox>
             </el-form-item>
+            <el-row style="padding-left: 20px" :gutter="8">
+              <el-col :span="12">
+                <el-form-item
+                  :label="t('visualization.inner_padding')"
+                  class="form-item w100"
+                  :class="'form-item-' + themes"
+                >
+                  <el-input-number
+                    style="width: 100%"
+                    :disabled="!commonBackgroundPop.backgroundColorSelect"
+                    :effect="themes"
+                    controls-position="right"
+                    size="middle"
+                    :min="0"
+                    :max="100"
+                    v-model="commonBackgroundPop.innerPadding"
+                    @change="onBackgroundChange"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item
+                  :label="t('visualization.board_radio')"
+                  class="form-item w100"
+                  :class="'form-item-' + themes"
+                >
+                  <el-input-number
+                    style="width: 100%"
+                    :effect="themes"
+                    :disabled="!commonBackgroundPop.backgroundColorSelect"
+                    controls-position="right"
+                    size="middle"
+                    :min="0"
+                    :max="100"
+                    v-model="commonBackgroundPop.borderRadius"
+                    @change="onBackgroundChange"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
             <el-form-item
               style="padding-left: 20px"
               class="form-item margin-bottom-8"
@@ -317,10 +389,14 @@ initParams()
                   label="innerImage"
                   :effect="themes"
                 >
-                  背景颜色
+                  {{ t('visualization.background_color') }}
                 </el-radio>
-                <el-radio key="color" v-else label="color" :effect="themes"> 背景颜色 </el-radio>
-                <el-radio label="outerImage" :effect="themes"> 背景图片 </el-radio>
+                <el-radio key="color" v-else label="color" :effect="themes">
+                  {{ t('visualization.background_color') }}
+                </el-radio>
+                <el-radio label="outerImage" :effect="themes">
+                  {{ t('visualization.background_img') }}
+                </el-radio>
               </el-radio-group>
             </el-form-item>
             <el-form-item
@@ -358,7 +434,7 @@ initParams()
                       class="image-hint"
                       :class="`image-hint_${themes}`"
                     >
-                      支持JPG、PNG、GIF、SVG
+                      {{ t('visualization.pic_import_tips') }}
                     </span>
 
                     <el-button
@@ -393,7 +469,7 @@ initParams()
             </el-form-item>
           </el-form>
         </el-collapse-item>
-        <el-collapse-item :effect="themes" name="addition" title="查询条件">
+        <el-collapse-item :effect="themes" name="addition" :title="t('v_query.query_condition')">
           <el-form @keydown.stop.prevent.enter label-position="top">
             <el-form-item class="form-item margin-bottom-8" :class="'form-item-' + themes">
               <el-checkbox
@@ -425,11 +501,11 @@ initParams()
                 @change="handleCurrentPlaceholderCustomChange"
                 v-model="chart.customStyle.component.placeholderShow"
               >
-                提示词
+                {{ t('v_query.custom_condition_style') }}
               </el-checkbox>
             </el-form-item>
             <el-form-item
-              label="文本"
+              :label="t('visualization.text_html')"
               class="form-item"
               style="padding-left: 20px"
               :class="'form-item-' + themes"
@@ -459,6 +535,7 @@ initParams()
                 <el-select
                   v-model="currentPlaceholder"
                   @change="handleCurrentPlaceholder"
+                  :effect="themes"
                   style="width: 100%"
                 >
                   <el-option
@@ -471,7 +548,7 @@ initParams()
               </div>
             </el-form-item>
             <el-form-item
-              label="提示词"
+              :label="t('visualization.tips_world')"
               class="form-item"
               style="padding-left: 20px"
               :class="'form-item-' + themes"
@@ -483,13 +560,27 @@ initParams()
                 v-model.lazy="currentSearch.placeholder"
               />
             </el-form-item>
+            <el-form-item
+              :label="t('v_query.query_condition_width')"
+              class="form-item"
+              style="padding-left: 20px"
+              :class="'form-item-' + themes"
+            >
+              <el-input-number
+                :effect="themes"
+                controls-position="right"
+                @change="handleCurrentPlaceholderChange"
+                :disabled="!chart.customStyle.component.placeholderShow || !currentPlaceholder"
+                v-model.lazy="currentSearch.queryConditionWidth"
+              />
+            </el-form-item>
             <el-form-item class="form-item margin-bottom-8" :class="'form-item-' + themes">
               <el-checkbox
                 :effect="themes"
                 size="small"
                 v-model="chart.customStyle.component.bgColorShow"
               >
-                自定义查询条件背景
+                {{ t('visualization.custom_query_bg_color') }}
               </el-checkbox>
             </el-form-item>
             <el-form-item
@@ -509,20 +600,7 @@ initParams()
             <el-form-item
               :effect="themes"
               class="form-item"
-              label="查询条件宽度"
-              :class="'form-item-' + themes"
-            >
-              <el-input-number
-                v-model="chart.customStyle.component.queryConditionWidth"
-                :min="0"
-                :effect="themes"
-                controls-position="right"
-              />
-            </el-form-item>
-            <el-form-item
-              :effect="themes"
-              class="form-item"
-              label="查询条件间距"
+              :label="t('visualization.query_condition_space')"
               :class="'form-item-' + themes"
             >
               <el-input-number
@@ -538,7 +616,7 @@ initParams()
           :themes="themes"
           v-model="chart.customStyle.component.labelShow"
           name="legend"
-          title="查询条件名称"
+          :title="t('visualization.query_condition_name')"
         >
           <el-form
             :class="!chart.customStyle.component.labelShow && 'is-disabled'"
@@ -552,8 +630,12 @@ initParams()
               :class="'form-item-' + themes"
             >
               <el-radio-group :effect="themes" v-model="chart.customStyle.component.layout">
-                <el-radio label="vertical" :effect="themes"> 上侧 </el-radio>
-                <el-radio label="horizontal" :effect="themes"> 左侧 </el-radio>
+                <el-radio label="vertical" :effect="themes">
+                  {{ t('visualization.condition_top') }}
+                </el-radio>
+                <el-radio label="horizontal" :effect="themes">
+                  {{ t('visualization.condition_left') }}
+                </el-radio>
               </el-radio-group>
             </el-form-item>
             <el-form-item
@@ -566,7 +648,11 @@ initParams()
                 is-custom
                 v-model="chart.customStyle.component.labelColor"
                 :predefine="predefineColors"
-              /><el-tooltip content="字号" :effect="toolTip" placement="top">
+              /><el-tooltip
+                :content="t('visualization.font_size')"
+                :effect="toolTip"
+                placement="top"
+              >
                 <el-select
                   style="width: 80px; margin: 0 8px"
                   :effect="themes"
@@ -624,7 +710,7 @@ initParams()
             <el-form-item
               :effect="themes"
               class="form-item"
-              label="名称与选框间距"
+              :label="t('visualization.query_name_space2')"
               :class="'form-item-' + themes"
             >
               <el-input-number
@@ -642,7 +728,7 @@ initParams()
             <el-form-item
               :effect="themes"
               class="form-item"
-              label="展示按钮"
+              :label="t('visualization.show_button')"
               :class="'form-item-' + themes"
             >
               <el-checkbox-group :effect="themes" v-model="chart.customStyle.component.btnList">
@@ -650,7 +736,7 @@ initParams()
                   {{ t('commons.adv_search.search') }}
                   <el-tooltip
                     :effect="toolTip"
-                    content="如果展示查询按钮，需要点击该按钮后才能触发图表查询；如果不展示查询按钮，选择完查询条件后立即触发图表查询"
+                    :content="t('visualization.query_tips')"
                     placement="top"
                   >
                     <el-icon class="hint-icon" :class="{ 'hint-icon--dark': themes === 'dark' }">
@@ -667,7 +753,11 @@ initParams()
                 </el-checkbox>
               </el-checkbox-group>
             </el-form-item>
-            <el-form-item class="form-item" label="按钮颜色" :class="'form-item-' + themes">
+            <el-form-item
+              class="form-item"
+              :label="t('visualization.button_color')"
+              :class="'form-item-' + themes"
+            >
               <el-color-picker
                 :effect="themes"
                 :trigger-width="108"
@@ -677,7 +767,7 @@ initParams()
               />
             </el-form-item>
             <el-form-item
-              label="按钮文字"
+              :label="t('visualization.button_text')"
               class="form-item margin-bottom-8"
               :class="'form-item-' + themes"
             >
@@ -686,7 +776,11 @@ initParams()
                 is-custom
                 v-model="chart.customStyle.component.labelColorBtn"
                 :predefine="predefineColors"
-              /><el-tooltip content="字号" :effect="toolTip" placement="top">
+              /><el-tooltip
+                :content="t('visualization.font_size')"
+                :effect="toolTip"
+                placement="top"
+              >
                 <el-select
                   style="width: 80px; margin: 0 8px"
                   :effect="themes"

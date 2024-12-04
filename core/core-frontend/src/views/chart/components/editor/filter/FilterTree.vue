@@ -84,7 +84,7 @@ defineExpose({
   <el-dialog
     width="896px"
     append-to-body
-    title="添加过滤"
+    :title="$t('chart.add_filter')"
     destroy-on-close
     class="de-dialog-form filter-tree-cont"
     v-model="dialogVisible"

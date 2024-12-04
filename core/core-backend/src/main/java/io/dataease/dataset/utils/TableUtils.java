@@ -44,7 +44,6 @@ public class TableUtils {
         String prefix = "";
         String suffix = "";
         if (StringUtils.isNotEmpty(sqlObj.getTableSchema())) {
-            schema = sqlObj.getTableSchema() + ".";
             if (isCross) {
                 prefix = "`";
                 suffix = "`";
@@ -52,6 +51,7 @@ public class TableUtils {
                 prefix = datasourceType.getPrefix();
                 suffix = datasourceType.getSuffix();
             }
+            schema = prefix + sqlObj.getTableSchema() + suffix + ".";
         }
         return schema + prefix + sqlObj.getTableName() + suffix + " " + sqlObj.getTableAlias();
     }

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "系统设置:系统参数")
 @ApiSupport(order = 799)
@@ -44,6 +45,10 @@ public interface SysParameterApi {
     @Operation(summary = "查询超时时间(非xpack)")
     @GetMapping("/requestTimeOut")
     public Integer RequestTimeOut();
+
+    @Operation(summary = "系统默认配置(非xpack)")
+    @GetMapping("/defaultSettings")
+    public Map<String, Object> defaultSettings();
 
     @Hidden
     @GetMapping("/ui")

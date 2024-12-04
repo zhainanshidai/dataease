@@ -3,20 +3,11 @@ package io.dataease.datasource.provider;
 
 import io.dataease.dataset.utils.TableUtils;
 import io.dataease.datasource.dao.auto.entity.CoreDeEngine;
-import io.dataease.datasource.request.EngineRequest;
-import io.dataease.datasource.type.H2;
-import io.dataease.datasource.type.Mysql;
-import io.dataease.extensions.datasource.dto.ConnectionObj;
-import io.dataease.extensions.datasource.dto.DatasourceDTO;
+import io.dataease.datasource.server.DatasourceServer;
 import io.dataease.extensions.datasource.dto.TableField;
-import io.dataease.extensions.datasource.vo.DatasourceConfiguration;
-import io.dataease.utils.BeanUtils;
-import io.dataease.utils.JsonUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
-import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 
@@ -34,18 +25,31 @@ public class H2EngineProvider extends EngineProvider {
     }
 
     @Override
-    public String insertSql(String name, List<String[]> dataList, int page, int pageNumber) {
-        String insertSql = "INSERT INTO `TABLE_NAME` VALUES ".replace("TABLE_NAME", name);
+    public String insertSql(String tableName, DatasourceServer.UpdateType extractType, List<String[]> dataList, int page, int pageNumber,List<TableField> tableFields) {
+        String engineTableName;
+        switch (extractType) {
+            case all_scope:
+                engineTableName = TableUtils.tmpName(TableUtils.tableName(tableName));
+                break;
+            default:
+                engineTableName = TableUtils.tableName(tableName);
+                break;
+        }
+        String insertSql = "INSERT INTO `TABLE_NAME` VALUES ".replace("TABLE_NAME", engineTableName);
         StringBuffer values = new StringBuffer();
 
         Integer realSize = page * pageNumber < dataList.size() ? page * pageNumber : dataList.size();
         for (String[] strings : dataList.subList((page - 1) * pageNumber, realSize)) {
-            String[] strings1 = new String[strings.length];
+            int length = 0;
+            String[] strings1 = new String[tableFields.stream().filter(TableField::isChecked).toList().size()];
             for (int i = 0; i < strings.length; i++) {
-                if (StringUtils.isEmpty(strings[i])) {
-                    strings1[i] = null;
-                } else {
-                    strings1[i] = strings[i].replace("'", "\\'");
+                if (tableFields.get(i).isChecked()) {
+                    if (StringUtils.isEmpty(strings[i])) {
+                        strings1[length] = null;
+                    } else {
+                        strings1[length] = strings[i].replace("\\", "\\\\").replace("'", "\\'");
+                    }
+                    length++;
                 }
             }
             values.append("('").append(String.join("','", Arrays.asList(strings1)))
@@ -78,34 +82,50 @@ public class H2EngineProvider extends EngineProvider {
     }
 
     private String createTableSql(final List<TableField> tableFields) {
-        StringBuilder Column_Fields = new StringBuilder("`");
+        StringBuilder columnFields = new StringBuilder("`");
+        StringBuilder key = new StringBuilder();
         for (TableField tableField : tableFields) {
-            Column_Fields.append(tableField.getName()).append("` ");
+            if (!tableField.isChecked()) {
+                continue;
+            }
+            if (tableField.isPrimaryKey()) {
+                key.append("`").append(tableField.getName()).append("`, ");
+            }
+            columnFields.append(tableField.getName()).append("` ");
             int size = tableField.getPrecision() * 4;
             switch (tableField.getDeType()) {
                 case 0:
-                    Column_Fields.append("varchar(2048)").append(",`");
+                    if (StringUtils.isNotEmpty(tableField.getLength())) {
+                        columnFields.append("varchar(length)".replace("length", tableField.getLength())).append(",`");
+                    } else {
+                        columnFields.append("longtext").append(",`");
+                    }
                     break;
                 case 1:
-                    Column_Fields.append("varchar(2048)").append(",`");
+                    columnFields.append("varchar(2048)").append(",`");
                     break;
                 case 2:
-                    Column_Fields.append("bigint(20)").append(",`");
+                    columnFields.append("bigint(20)").append(",`");
                     break;
                 case 3:
-                    Column_Fields.append("varchar(100)").append(",`");
+                    columnFields.append("varchar(100)").append(",`");
                     break;
                 case 4:
-                    Column_Fields.append("TINYINT(length)".replace("length", String.valueOf(tableField.getPrecision()))).append(",`");
+                    columnFields.append("TINYINT(length)".replace("length", String.valueOf(tableField.getPrecision()))).append(",`");
                     break;
                 default:
-                    Column_Fields.append("varchar(2048)").append(",`");
+                    columnFields.append("longtext").append(",`");
                     break;
             }
         }
-
-        Column_Fields = new StringBuilder(Column_Fields.substring(0, Column_Fields.length() - 2));
-        Column_Fields = new StringBuilder("(" + Column_Fields + ")\n");
-        return Column_Fields.toString();
+        if (StringUtils.isEmpty(key.toString())) {
+            columnFields = new StringBuilder(columnFields.substring(0, columnFields.length() - 2));
+        } else {
+            key = new StringBuilder(key.substring(0, key.length() - 2));
+            columnFields = new StringBuilder(columnFields.substring(0, columnFields.length() - 1));
+            columnFields.append("PRIMARY KEY (PRIMARYKEY)".replace("PRIMARYKEY", key.toString()));
+        }
+        columnFields = new StringBuilder("(" + columnFields + ")");
+        return columnFields.toString();
     }
 }

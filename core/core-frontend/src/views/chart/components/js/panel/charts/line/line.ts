@@ -11,11 +11,13 @@ import {
 } from '../../common/common_antv'
 import {
   flow,
+  getLineConditions,
+  getLineLabelColorByCondition,
   hexColorToRGBA,
   parseJson,
   setUpGroupSeriesColor
 } from '@/views/chart/components/js/util'
-import { cloneDeep, isEmpty } from 'lodash-es'
+import { cloneDeep, defaults, isEmpty } from 'lodash-es'
 import { valueFormatter } from '@/views/chart/components/js/formatter'
 import {
   LINE_AXIS_TYPE,
@@ -24,7 +26,7 @@ import {
 } from '@/views/chart/components/js/panel/charts/line/common'
 import type { Datum } from '@antv/g2plot/esm/types/common'
 import { useI18n } from '@/hooks/web/useI18n'
-import { DEFAULT_LABEL } from '@/views/chart/components/editor/util/chart'
+import { DEFAULT_LABEL, DEFAULT_LEGEND_STYLE } from '@/views/chart/components/editor/util/chart'
 import { clearExtremum, extremumEvt } from '@/views/chart/components/js/extremumUitl'
 import { Group } from '@antv/g-canvas'
 
@@ -38,7 +40,7 @@ export class Line extends G2PlotChartView<LineOptions, G2Line> {
   propertyInner = {
     ...LINE_EDITOR_PROPERTY_INNER,
     'basic-style-selector': [...LINE_EDITOR_PROPERTY_INNER['basic-style-selector'], 'seriesColor'],
-    'label-selector': ['seriesLabelFormatter', 'showExtremum'],
+    'label-selector': ['seriesLabelVPosition', 'seriesLabelFormatter', 'showExtremum'],
     'tooltip-selector': [
       ...LINE_EDITOR_PROPERTY_INNER['tooltip-selector'],
       'seriesTooltipFormatter'
@@ -133,7 +135,8 @@ export class Line extends G2PlotChartView<LineOptions, G2Line> {
         label: false
       }
     }
-    const { label: labelAttr } = parseJson(chart.customAttr)
+    const { label: labelAttr, basicStyle } = parseJson(chart.customAttr)
+    const conditions = getLineConditions(chart)
     const formatterMap = labelAttr.seriesLabelFormatter?.reduce((pre, next) => {
       pre[next.id] = next
       return pre
@@ -142,7 +145,7 @@ export class Line extends G2PlotChartView<LineOptions, G2Line> {
     const label = {
       fields: [],
       ...tmpOptions.label,
-      offsetY: -8,
+      layout: labelAttr.fullDisplay ? [{ type: 'limit-in-plot' }] : tmpOptions.label.layout,
       formatter: (data: Datum, _point) => {
         if (data.EXTREME) {
           return ''
@@ -157,18 +160,26 @@ export class Line extends G2PlotChartView<LineOptions, G2Line> {
         if (!labelCfg.show) {
           return
         }
+        const position =
+          labelCfg.position === 'top'
+            ? -2 - basicStyle.lineSymbolSize
+            : 10 + basicStyle.lineSymbolSize
         const value = valueFormatter(data.value, labelCfg.formatterCfg)
+        const color =
+          getLineLabelColorByCondition(conditions, data.value, data.quotaList[0].id) ||
+          labelCfg.color
         const group = new Group({})
         group.addShape({
           type: 'text',
           attrs: {
             x: 0,
-            y: 0,
+            y: position,
             text: value,
             textAlign: 'start',
             textBaseline: 'top',
             fontSize: labelCfg.fontSize,
-            fill: labelCfg.color
+            fontFamily: chart.fontFamily,
+            fill: color
           }
         })
         return group
@@ -306,36 +317,37 @@ export class Line extends G2PlotChartView<LineOptions, G2Line> {
     const xAxisExt = chart.xAxisExt[0]
     if (xAxisExt?.customSort?.length > 0) {
       // 图例自定义排序
-      const l = optionTmp.legend
-      const basicStyle = parseJson(chart.customAttr).basicStyle
       const sort = xAxisExt.customSort ?? []
-      const legendItems = []
-      sort.forEach((item, index) => {
-        legendItems.push({
-          name: item,
-          value: item,
-          marker: {
-            symbol: l.marker.symbol,
-            style: {
-              r: 4,
-              fill: basicStyle.colors[index % basicStyle.colors.length]
-            }
+      if (sort?.length) {
+        // 用值域限定排序，有可能出现新数据但是未出现在图表上，所以这边要遍历一下子维度，加到后面，让新数据显示出来
+        const data = optionTmp.data
+        data?.forEach(d => {
+          const cat = d['category']
+          if (cat && !sort.includes(cat)) {
+            sort.push(cat)
           }
         })
-      })
-      const legend = {
-        ...l,
-        custom: true,
-        items: legendItems
-      }
-      return {
-        ...optionTmp,
-        legend
+        optionTmp.meta = {
+          ...optionTmp.meta,
+          category: {
+            type: 'cat',
+            values: sort
+          }
+        }
       }
     }
+
+    const customStyle = parseJson(chart.customStyle)
+    let size
+    if (customStyle && customStyle.legend) {
+      size = defaults(JSON.parse(JSON.stringify(customStyle.legend)), DEFAULT_LEGEND_STYLE).size
+    } else {
+      size = DEFAULT_LEGEND_STYLE.size
+    }
+
     optionTmp.legend.marker.style = style => {
       return {
-        r: 4,
+        r: size,
         fill: style.stroke
       }
     }
@@ -354,7 +366,8 @@ export class Line extends G2PlotChartView<LineOptions, G2Line> {
       this.configXAxis,
       this.configYAxis,
       this.configSlider,
-      this.configAnalyse
+      this.configAnalyse,
+      this.configConditions
     )(chart, options)
   }
 

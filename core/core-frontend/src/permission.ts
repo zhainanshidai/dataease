@@ -2,6 +2,7 @@ import router from './router'
 import { useUserStoreWithOut } from '@/store/modules/user'
 import { useAppStoreWithOut } from '@/store/modules/app'
 import type { RouteRecordRaw } from 'vue-router'
+import { getDefaultSettings } from '@/api/common'
 import { useNProgress } from '@/hooks/web/useNProgress'
 import { usePermissionStoreWithOut, pathValid, getFirstAuthMenu } from '@/store/modules/permission'
 import { usePageLoading } from '@/hooks/web/usePageLoading'
@@ -22,7 +23,7 @@ const { start, done } = useNProgress()
 
 const { loadStart, loadDone } = usePageLoading()
 
-const whiteList = ['/login', '/de-link', '/chart-view', '/notSupport', '/admin-login', '/401'] // 不重定向白名单
+const whiteList = ['/login', '/de-link', '/chart-view', '/admin-login', '/401'] // 不重定向白名单
 const embeddedWindowWhiteList = ['/dvCanvas', '/dashboard', '/preview', '/dataset-embedded-form']
 const embeddedRouteWhiteList = ['/dataset-embedded', '/dataset-form', '/dataset-embedded-form']
 router.beforeEach(async (to, from, next) => {
@@ -34,7 +35,7 @@ router.beforeEach(async (to, from, next) => {
     await appStore.setAppModel()
     isDesktop = appStore.getDesktop
   }
-  if (isMobile() && !['/notSupport', '/chart-view'].includes(to.path)) {
+  if (isMobile() && !['/chart-view'].includes(to.path)) {
     done()
     loadDone()
     if (to.name === 'link') {
@@ -48,8 +49,6 @@ router.beforeEach(async (to, from, next) => {
         }
       }
       window.location.href = window.origin + '/mobile.html#' + to.path + linkQuery
-    } else if (to.path === '/dvCanvas') {
-      next('/notSupport')
     } else if (
       wsCache.get('user.token') ||
       isDesktop ||
@@ -60,6 +59,9 @@ router.beforeEach(async (to, from, next) => {
   }
   await appearanceStore.setAppearance()
   await appearanceStore.setFontList()
+  const defaultSort = await getDefaultSettings()
+  wsCache.set('TreeSort-backend', defaultSort['basic.defaultSort'] ?? '1')
+  wsCache.set('open-backend', defaultSort['basic.defaultOpen'] ?? '0')
   if ((wsCache.get('user.token') || isDesktop) && !to.path.startsWith('/de-link/')) {
     if (!userStore.getUid) {
       await userStore.setUser()
@@ -71,7 +73,7 @@ router.beforeEach(async (to, from, next) => {
       if (permissionStore.getIsAddRouters) {
         let str = ''
         if (((from.query.redirect as string) || '?').split('?')[0] === to.path) {
-          str = ((from.query.redirect as string) || '?').split('?')[1]
+          str = ((window.location.hash as string) || '?').split('?').reverse()[0]
         }
         if (str) {
           to.fullPath += '?' + str

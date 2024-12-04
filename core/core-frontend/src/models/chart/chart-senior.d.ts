@@ -147,6 +147,10 @@ declare interface ChartThreshold {
    * 文本卡阈值
    */
   textLabelThreshold: Threshold[]
+  /**
+   * 折线阈值
+   */
+  lineThreshold: TableThreshold[]
 }
 declare interface TableThreshold {
   /**

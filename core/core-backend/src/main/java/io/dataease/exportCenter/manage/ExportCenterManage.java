@@ -21,6 +21,7 @@ import io.dataease.dataset.dao.auto.entity.CoreDatasetGroup;
 import io.dataease.dataset.dao.auto.mapper.CoreDatasetGroupMapper;
 import io.dataease.dataset.manage.*;
 import io.dataease.datasource.utils.DatasourceUtils;
+import io.dataease.engine.constant.DeTypeConstants;
 import io.dataease.engine.sql.SQLProvider;
 import io.dataease.engine.trans.Field2SQLObj;
 import io.dataease.engine.trans.Order2SQLObj;
@@ -30,6 +31,7 @@ import io.dataease.engine.utils.Utils;
 import io.dataease.exception.DEException;
 import io.dataease.exportCenter.dao.auto.entity.CoreExportTask;
 import io.dataease.exportCenter.dao.auto.mapper.CoreExportTaskMapper;
+import io.dataease.exportCenter.util.ExportCenterUtils;
 import io.dataease.extensions.datasource.api.PluginManageApi;
 import io.dataease.extensions.datasource.dto.DatasetTableFieldDTO;
 import io.dataease.extensions.datasource.dto.DatasourceRequest;
@@ -37,11 +39,11 @@ import io.dataease.extensions.datasource.dto.DatasourceSchemaDTO;
 import io.dataease.extensions.datasource.factory.ProviderFactory;
 import io.dataease.extensions.datasource.model.SQLMeta;
 import io.dataease.extensions.datasource.provider.Provider;
+import io.dataease.extensions.view.dto.ChartViewDTO;
 import io.dataease.extensions.view.dto.ColumnPermissionItem;
 import io.dataease.extensions.view.dto.DatasetRowPermissionsTreeObj;
 import io.dataease.i18n.Translator;
 import io.dataease.license.config.XpackInteract;
-import io.dataease.license.manage.F2CLicLimitedManage;
 import io.dataease.license.utils.LicenseUtil;
 import io.dataease.model.ExportTaskDTO;
 import io.dataease.system.manage.CoreUserManage;
@@ -99,10 +101,14 @@ public class ExportCenterManage implements BaseExportApi {
     @Value("${dataease.export.max.size:10}")
     private int max;
 
-    @Value("${dataease.export.dataset.limit:100000}")
-    private Long limit;
+
     private final static String DATA_URL_TITLE = "data:image/jpeg;base64,";
     private static final String exportData_path = "/opt/dataease2.0/data/exportData/";
+
+    public Integer getExtractPageSize() {
+        return extractPageSize;
+    }
+
     @Value("${dataease.export.page.size:50000}")
     private Integer extractPageSize;
     static private List<String> STATUS = Arrays.asList("SUCCESS", "FAILED", "PENDING", "IN_PROGRESS", "ALL");
@@ -121,7 +127,7 @@ public class ExportCenterManage implements BaseExportApi {
     private DatasetTableFieldManage datasetTableFieldManage;
     @Resource
     private DatasetDataManage datasetDataManage;
-
+    private final Long sheetLimit = 1000000L;
     @Autowired(required = false)
     private DataFillingApi dataFillingApi = null;
 
@@ -129,8 +135,6 @@ public class ExportCenterManage implements BaseExportApi {
         return dataFillingApi;
     }
 
-    @Resource(name = "f2CLicLimitedManage")
-    private F2CLicLimitedManage f2CLicLimitedManage;
 
     @PostConstruct
     public void init() {
@@ -160,13 +164,6 @@ public class ExportCenterManage implements BaseExportApi {
         }
     }
 
-    public String exportLimit() {
-        return String.valueOf(getExportLimit());
-    }
-
-    private Long getExportLimit() {
-        return Math.min(f2CLicLimitedManage.checkDatasetLimit(), limit);
-    }
 
     public void download(String id, HttpServletResponse response) throws Exception {
         CoreExportTask exportTask = exportTaskMapper.selectById(id);
@@ -349,7 +346,8 @@ public class ExportCenterManage implements BaseExportApi {
         startViewTask(exportTask, request);
     }
 
-    public void addTask(Long exportFrom, String exportFromType, DataSetExportRequest request) {
+    public void addTask(Long exportFrom, String exportFromType, DataSetExportRequest request) throws Exception {
+        datasetGroupManage.getDatasetGroupInfoDTO(exportFrom, null);
         CoreExportTask exportTask = new CoreExportTask();
         exportTask.setId(UUID.randomUUID().toString());
         exportTask.setUserId(AuthUtils.getUser().getUserId());
@@ -508,12 +506,19 @@ public class ExportCenterManage implements BaseExportApi {
                 Order2SQLObj.getOrders(sqlMeta, dto.getSortFields(), allFields, crossDs, dsMap, Utils.getParams(allFields), null, pluginManage);
                 String replaceSql = provider.rebuildSQL(SQLProvider.createQuerySQL(sqlMeta, false, false, false), sqlMeta, crossDs, dsMap);
                 Long totalCount = datasetDataManage.getDatasetTotal(dto, replaceSql, null);
-                Long curLimit = getExportLimit();
+                Long curLimit = ExportCenterUtils.getExportLimit("dataset");
                 totalCount = totalCount > curLimit ? curLimit : totalCount;
-                Long sheetLimit = 1000000L;
+
                 Long sheetCount = (totalCount / sheetLimit) + (totalCount % sheetLimit > 0 ? 1 : 0);
                 Workbook wb = new SXSSFWorkbook();
-                FileOutputStream fileOutputStream = new FileOutputStream(dataPath + "/" + exportTask.getId() + ".xlsx");
+                CellStyle cellStyle = wb.createCellStyle();
+                Font font = wb.createFont();
+                font.setFontHeightInPoints((short) 12);
+                font.setBold(true);
+                cellStyle.setFont(font);
+                cellStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+                cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
                 for (Long s = 1L; s < sheetCount + 1; s++) {
                     Long sheetSize;
                     if (s.equals(sheetCount)) {
@@ -525,7 +530,8 @@ public class ExportCenterManage implements BaseExportApi {
                     Sheet detailsSheet = null;
                     List<List<String>> details = new ArrayList<>();
                     for (Long p = 0L; p < pageSize; p++) {
-                        String querySQL = SQLProvider.createQuerySQLWithLimit(sqlMeta, false, needOrder, false, p.intValue() * extractPageSize, extractPageSize);
+                        int beforeCount = (int) ((s - 1) * sheetLimit);
+                        String querySQL = SQLProvider.createQuerySQLWithLimit(sqlMeta, false, needOrder, false, beforeCount + p.intValue() * extractPageSize, extractPageSize);
                         if (pageSize == 1) {
                             querySQL = SQLProvider.createQuerySQLWithLimit(sqlMeta, false, needOrder, false, 0, sheetSize.intValue());
                         }
@@ -536,14 +542,7 @@ public class ExportCenterManage implements BaseExportApi {
                         Map<String, Object> previewData = datasetDataManage.buildPreviewData(provider.fetchResultField(datasourceRequest), allFields, desensitizationList);
                         List<Map<String, Object>> data = (List<Map<String, Object>>) previewData.get("data");
                         if (p.equals(0L)) {
-                            detailsSheet = wb.createSheet("数据-" + s);
-                            CellStyle cellStyle = wb.createCellStyle();
-                            Font font = wb.createFont();
-                            font.setFontHeightInPoints((short) 12);
-                            font.setBold(true);
-                            cellStyle.setFont(font);
-                            cellStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-                            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                            detailsSheet = wb.createSheet("数据" + s);
                             List<String> header = new ArrayList<>();
                             for (DatasetTableFieldDTO field : allFields) {
                                 header.add(field.getName());
@@ -569,7 +568,15 @@ public class ExportCenterManage implements BaseExportApi {
                                                 cell.setCellStyle(cellStyle);
                                                 detailsSheet.setColumnWidth(j, 255 * 20);
                                             } else {
-                                                cell.setCellValue(rowData.get(j));
+                                                if ((allFields.get(j).getDeType().equals(DeTypeConstants.DE_INT) || allFields.get(j).getDeType() == DeTypeConstants.DE_FLOAT) && StringUtils.isNotEmpty(rowData.get(j))) {
+                                                    try {
+                                                        cell.setCellValue(Double.valueOf(rowData.get(j)));
+                                                    } catch (Exception e) {
+                                                        cell.setCellValue(rowData.get(j));
+                                                    }
+                                                } else {
+                                                    cell.setCellValue(rowData.get(j));
+                                                }
                                             }
                                         }
                                     }
@@ -606,6 +613,7 @@ public class ExportCenterManage implements BaseExportApi {
                         exportTaskMapper.updateById(exportTask);
                     }
                 }
+                FileOutputStream fileOutputStream = new FileOutputStream(dataPath + "/" + exportTask.getId() + ".xlsx");
                 wb.write(fileOutputStream);
                 fileOutputStream.flush();
                 fileOutputStream.close();
@@ -636,52 +644,46 @@ public class ExportCenterManage implements BaseExportApi {
             try {
                 exportTask.setExportStatus("IN_PROGRESS");
                 exportTaskMapper.updateById(exportTask);
-                chartDataServer.findExcelData(request);
-
                 Workbook wb = new SXSSFWorkbook();
-
-                //给单元格设置样式
                 CellStyle cellStyle = wb.createCellStyle();
                 Font font = wb.createFont();
-                //设置字体大小
                 font.setFontHeightInPoints((short) 12);
-                //设置字体加粗
                 font.setBold(true);
-                //给字体设置样式
                 cellStyle.setFont(font);
-                //设置单元格背景颜色
                 cellStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-                //设置单元格填充样式(使用纯色背景颜色填充)
                 cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
-                if (CollectionUtils.isEmpty(request.getMultiInfo())) {
-                    List<Object[]> details = request.getDetails();
-                    Integer[] excelTypes = request.getExcelTypes();
-                    details.add(0, request.getHeader());
-                    ViewDetailField[] detailFields = request.getDetailFields();
-                    Object[] header = request.getHeader();
-
-                    //明细sheet
-                    Sheet detailsSheet = wb.createSheet("数据");
-
-                    ChartDataServer.setExcelData(detailsSheet, cellStyle, header, details, detailFields, excelTypes);
-                } else {
-                    //多个sheet
-                    for (int i = 0; i < request.getMultiInfo().size(); i++) {
-                        ChartExcelRequestInner requestInner = request.getMultiInfo().get(i);
-
-                        List<Object[]> details = requestInner.getDetails();
-                        Integer[] excelTypes = requestInner.getExcelTypes();
-                        details.add(0, requestInner.getHeader());
-                        ViewDetailField[] detailFields = requestInner.getDetailFields();
-                        Object[] header = requestInner.getHeader();
-
-                        //明细sheet
-                        Sheet detailsSheet = wb.createSheet("数据 " + (i + 1));
-
-                        ChartDataServer.setExcelData(detailsSheet, cellStyle, header, details, detailFields, excelTypes);
+                List<Object[]> details = new ArrayList<>();
+                Sheet detailsSheet;
+                Integer sheetIndex = 1;
+                if ("dataset".equals(request.getDownloadType()) || request.getViewInfo().getType().equalsIgnoreCase("table-info")) {
+                    request.getViewInfo().getChartExtRequest().setPageSize(Long.valueOf(extractPageSize));
+                    ChartViewDTO chartViewDTO = chartDataServer.findExcelData(request);
+                    for (long i = 1; i < chartViewDTO.getTotalPage() + 1; i++) {
+                        request.getViewInfo().getChartExtRequest().setGoPage(i);
+                        chartDataServer.findExcelData(request);
+                        details.addAll(request.getDetails());
+                        if (((details.size() + extractPageSize) > sheetLimit) || i == chartViewDTO.getTotalPage()) {
+                            detailsSheet = wb.createSheet("数据" + sheetIndex);
+                            Integer[] excelTypes = request.getExcelTypes();
+                            details.add(0, request.getHeader());
+                            ViewDetailField[] detailFields = request.getDetailFields();
+                            Object[] header = request.getHeader();
+                            ChartDataServer.setExcelData(detailsSheet, cellStyle, header, details, detailFields, excelTypes);
+                            sheetIndex++;
+                            details.clear();
+                            exportTask.setExportStatus("IN_PROGRESS");
+                            double exportRogress = (double) (i / (chartViewDTO.getTotalPage() + 1));
+                            DecimalFormat df = new DecimalFormat("#.##");
+                            String formattedResult = df.format((exportRogress) * 100);
+                            exportTask.setExportProgress(formattedResult);
+                            exportTaskMapper.updateById(exportTask);
+                        }
                     }
+                } else {
+                    downloadNotTableInfoData(request, wb);
                 }
+
                 try (FileOutputStream outputStream = new FileOutputStream(dataPath + "/" + exportTask.getId() + ".xlsx")) {
                     wb.write(outputStream);
                     outputStream.flush();
@@ -701,6 +703,48 @@ public class ExportCenterManage implements BaseExportApi {
         Running_Task.put(exportTask.getId(), future);
     }
 
+    private void downloadNotTableInfoData(ChartExcelRequest request, Workbook wb) {
+        chartDataServer.findExcelData(request);
+        //给单元格设置样式
+        CellStyle cellStyle = wb.createCellStyle();
+        Font font = wb.createFont();
+        //设置字体大小
+        font.setFontHeightInPoints((short) 12);
+        //设置字体加粗
+        font.setBold(true);
+        //给字体设置样式
+        cellStyle.setFont(font);
+        //设置单元格背景颜色
+        cellStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+        //设置单元格填充样式(使用纯色背景颜色填充)
+        cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        if (CollectionUtils.isEmpty(request.getMultiInfo())) {
+            if (request.getViewInfo().getType().equalsIgnoreCase("chart-mix-dual-line")) {
+            } else {
+                List<Object[]> details = request.getDetails();
+                Integer[] excelTypes = request.getExcelTypes();
+                details.add(0, request.getHeader());
+                ViewDetailField[] detailFields = request.getDetailFields();
+                Object[] header = request.getHeader();
+                Sheet detailsSheet = wb.createSheet("数据");
+                ChartDataServer.setExcelData(detailsSheet, cellStyle, header, details, detailFields, excelTypes);
+            }
+        } else {
+            //多个sheet
+            for (int i = 0; i < request.getMultiInfo().size(); i++) {
+                ChartExcelRequestInner requestInner = request.getMultiInfo().get(i);
+
+                List<Object[]> details = requestInner.getDetails();
+                Integer[] excelTypes = requestInner.getExcelTypes();
+                details.add(0, requestInner.getHeader());
+                ViewDetailField[] detailFields = requestInner.getDetailFields();
+                Object[] header = requestInner.getHeader();
+                //明细sheet
+                Sheet detailsSheet = wb.createSheet("数据 " + (i + 1));
+                ChartDataServer.setExcelData(detailsSheet, cellStyle, header, details, detailFields, excelTypes);
+            }
+        }
+    }
 
     private void setFileSize(String filePath, CoreExportTask exportTask) {
         File file = new File(filePath);

@@ -60,6 +60,9 @@ public class NumericalChartHandler extends DefaultChartHandler {
         String maxType = (String) target.get(type);
         if (StringUtils.equalsIgnoreCase("dynamic", maxType)) {
             Map<String, Object> maxField = (Map<String, Object>) target.get(field);
+            if (maxField.get("id") == null || StringUtils.isEmpty(maxField.get("id").toString())) {
+                DEException.throwException(Translator.get("i18n_gauge_field_delete"));
+            }
             Long id = Long.valueOf((String) maxField.get("id"));
             String summary = (String) maxField.get("summary");
             DatasetTableFieldDTO datasetTableField = datasetTableFieldManage.selectById(id);

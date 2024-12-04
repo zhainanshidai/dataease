@@ -343,7 +343,15 @@ export const DEFAULT_LABEL: ChartLabelAttr = {
   totalColor: '#FFF',
   totalFormatter: formatterItem,
   showStackQuota: false,
-  fullDisplay: false
+  fullDisplay: false,
+  proportionSeriesFormatter: {
+    show: false,
+    color: '#000',
+    fontSize: 12,
+    formatterCfg: {
+      decimalCount: 2
+    }
+  }
 }
 export const DEFAULT_TOOLTIP: ChartTooltipAttr = {
   show: true,
@@ -521,7 +529,8 @@ export const DEFAULT_LEGEND_STYLE: ChartLegendStyle = {
   orient: 'horizontal',
   icon: 'circle',
   color: '#333333',
-  fontSize: 12
+  fontSize: 12,
+  size: 4
 }
 
 export const DEFAULT_LEGEND_STYLE_BASE: ChartLegendStyle = {
@@ -531,7 +540,8 @@ export const DEFAULT_LEGEND_STYLE_BASE: ChartLegendStyle = {
   orient: 'horizontal',
   icon: 'circle',
   color: '#333333',
-  fontSize: 12
+  fontSize: 12,
+  size: 4
 }
 
 export const DEFAULT_LEGEND_STYLE_LIGHT: ChartLegendStyle = {
@@ -565,7 +575,8 @@ export const DEFAULT_XAXIS_STYLE: ChartAxisStyle = {
     color: '#333333',
     fontSize: 12,
     rotate: 0,
-    formatter: '{value}'
+    formatter: '{value}',
+    lengthLimit: 10
   },
   axisLine: {
     show: true,
@@ -609,7 +620,8 @@ export const DEFAULT_YAXIS_STYLE: ChartAxisStyle = {
     color: '#333333',
     fontSize: 12,
     rotate: 0,
-    formatter: '{value}'
+    formatter: '{value}',
+    lengthLimit: 10
   },
   axisLine: {
     show: false,
@@ -761,7 +773,8 @@ export const DEFAULT_THRESHOLD: ChartThreshold = {
   liquidThreshold: '',
   labelThreshold: [],
   tableThreshold: [],
-  textLabelThreshold: []
+  textLabelThreshold: [],
+  lineLabelThreshold: []
 }
 export const DEFAULT_SCROLL: ScrollCfg = {
   open: false,
@@ -1097,6 +1110,20 @@ export const BASE_ECHARTS_SELECT = {
   itemStyle: {
     shadowBlur: 2
   }
+}
+
+export const CHART_FONT_FAMILY_ORIGIN = [
+  { name: '微软雅黑', value: 'Microsoft YaHei' },
+  { name: '宋体', value: 'SimSun, "Songti SC", STSong' },
+  { name: '黑体', value: 'SimHei, Helvetica' },
+  { name: '楷体', value: 'KaiTi, "Kaiti SC", STKaiti' }
+]
+
+export const CHART_FONT_FAMILY_MAP_TRANS = {
+  'Microsoft YaHei': 'Microsoft YaHei',
+  'SimSun, "Songti SC", STSong': 'SimSun',
+  'SimHei, Helvetica': 'SimHei',
+  'KaiTi, "Kaiti SC", STKaiti': 'KaiTi'
 }
 
 export const CHART_FONT_FAMILY = [
@@ -1516,14 +1543,14 @@ export const CHART_TYPE_CONFIGS = [
         render: 'custom',
         category: 'quota',
         value: 'rich-text',
-        title: '富文本',
+        title: t('visualization.rich_text'),
         icon: 'rich-text'
       },
       {
         render: 'custom',
         category: 'quota',
         value: 'picture-group',
-        title: '图片组',
+        title: t('visualization.picture_group'),
         icon: 'picture-group'
       }
     ]
@@ -1533,7 +1560,7 @@ export const CHART_TYPE_CONFIGS = [
 export const DEFAULT_BASIC_STYLE: ChartBasicStyle = {
   alpha: 100,
   tableBorderColor: '#CCCCCC',
-  tableScrollBarColor: 'rgba(0, 0, 0, 0.15)',
+  tableScrollBarColor: '#1f23294d',
   tableColumnMode: 'adapt',
   tableColumnWidth: 100,
   tableFieldWidth: [],
@@ -1604,7 +1631,12 @@ export const DEFAULT_BASIC_STYLE: ChartBasicStyle = {
   },
   zoomLevel: 7,
   customIcon: '',
-  showHoverStyle: true
+  showHoverStyle: true,
+  autoWrap: false,
+  maxLines: 3,
+  radarShowPoint: true,
+  radarPointSize: 4,
+  radarAreaColor: true
 }
 
 export const BASE_VIEW_CONFIG = {

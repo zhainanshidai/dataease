@@ -54,6 +54,7 @@ import { viewFieldTimeTrans } from '@/utils/viewUtils'
 import { CHART_TYPE_CONFIGS } from '@/views/chart/components/editor/util/chart'
 import request from '@/config/axios'
 import { store } from '@/store'
+import { clearExtremum } from '@/views/chart/components/js/extremumUitl'
 
 const { wsCache } = useCache()
 const chartComponent = ref<any>()
@@ -130,11 +131,15 @@ const props = defineProps({
     type: String,
     required: false,
     default: 'common'
+  },
+  fontFamily: {
+    type: String,
+    required: false,
+    default: 'inherit'
   }
 })
 const dynamicAreaId = ref('')
-const { view, showPosition, element, active, searchCount, scale } = toRefs(props)
-
+const { view, showPosition, element, active, searchCount, scale, suffixId } = toRefs(props)
 const titleShow = computed(() => {
   return (
     !['rich-text', 'picture-group'].includes(element.value.innerType) &&
@@ -465,14 +470,42 @@ const jumpClick = param => {
     // 内部仪表板跳转
     if (jumpInfo.linkType === 'inner') {
       if (jumpInfo.targetDvId) {
+        const filterOuterParams = {}
+        const curFilter = dvMainStore.getLastViewRequestInfo(param.viewId)
+        const targetViewInfoList = jumpInfo.targetViewInfoList
+        if (
+          curFilter &&
+          curFilter.filter &&
+          curFilter.filter.length > 0 &&
+          targetViewInfoList &&
+          targetViewInfoList.length > 0
+        ) {
+          // do filter
+          curFilter.filter.forEach(filterItem => {
+            targetViewInfoList.forEach(targetViewInfo => {
+              if (targetViewInfo.sourceFieldActiveId === filterItem.filterId) {
+                filterOuterParams[targetViewInfo.outerParamsName] = filterItem.value
+              }
+            })
+          })
+        }
+        let attachParamsInfo
+        if (Object.keys(filterOuterParams).length > 0) {
+          attachParamsInfo =
+            '&attachParams=' + encodeURIComponent(Base64.encode(JSON.stringify(filterOuterParams)))
+        }
+        // 携带外部参数
         if (publicLinkStatus.value) {
           // 判断是否有公共链接ID
           if (jumpInfo.publicJumpId) {
-            const url = `${embeddedBaseUrl}#/de-link/${
+            let url = `${embeddedBaseUrl}#/de-link/${
               jumpInfo.publicJumpId
             }?fromLink=true&jumpInfoParam=${encodeURIComponent(
               Base64.encode(JSON.stringify(param))
             )}`
+            if (attachParamsInfo) {
+              url = url + attachParamsInfo
+            }
             const currentUrl = window.location.href
             localStorage.setItem('beforeJumpUrl', currentUrl)
             windowsJump(url, jumpInfo.jumpType, jumpInfo.windowSize)
@@ -480,9 +513,12 @@ const jumpClick = param => {
             ElMessage.warning(t('visualization.public_link_tips'))
           }
         } else {
-          const url = `${embeddedBaseUrl}#/preview?dvId=${
+          let url = `${embeddedBaseUrl}#/preview?dvId=${
             jumpInfo.targetDvId
           }&fromLink=true&jumpInfoParam=${encodeURIComponent(Base64.encode(JSON.stringify(param)))}`
+          if (attachParamsInfo) {
+            url = url + attachParamsInfo
+          }
           const currentUrl = window.location.href
           localStorage.setItem('beforeJumpUrl', currentUrl)
           if (isIframe.value || isDataEaseBi.value) {
@@ -581,6 +617,8 @@ onBeforeMount(() => {
 const listenerEnable = computed(() => {
   return !showPosition.value.includes('viewDialog')
 })
+// 存储所有数据集字段，用于判断图表拖入的字段是否存在
+const viewAllDatasetFields = new Map()
 const showEmpty = ref(false)
 const checkFieldIsAllowEmpty = (allField?) => {
   showEmpty.value = false
@@ -596,47 +634,69 @@ const checkFieldIsAllowEmpty = (allField?) => {
       return
     }
     const axisConfigMap = new Map(Object.entries(chartView.axisConfig))
-    // 验证拖入的字段是否包含在当前数据集字段中，如果一个都不在数据集字段中，则显示空图表
+    // 验证拖入的字段是否包含在当前数据集字段中，如果有一个不在数据集字段中，则显示空图表
     let includeDatasetField = false
     if (allField && allField.length > 0) {
-      axisConfigMap.forEach((value, key) => {
-        if (view.value?.[key]?.length > 0) {
-          view.value[key].forEach(item => {
-            if (!allField.find(field => field.id === item.id)) {
-              includeDatasetField = true
-              return false
-            }
-          })
-          if (includeDatasetField) {
-            return false
+      viewAllDatasetFields.set(view.value.id, allField)
+      outerLoop: for (const [key, value] of axisConfigMap) {
+        // 只判断必须的
+        if (value['allowEmpty']) continue
+        if (!view.value?.[key]?.length) continue
+        for (const item of view.value[key]) {
+          if (!allField.find(field => field.id === item.id)) {
+            includeDatasetField = true
+            break outerLoop
           }
         }
-      })
+      }
     }
     if (includeDatasetField) {
       showEmpty.value = true
       return
     }
-    axisConfigMap.forEach((value, key) => {
-      // 不允许为空,并且没限制长度
-      if (!value['allowEmpty'] && !value['limit'] && view.value?.[key]?.length === 0) {
-        showEmpty.value = true
-        return false
+    for (const [key, value] of axisConfigMap) {
+      // 跳过允许为空的配置项
+      if (value['allowEmpty']) continue
+
+      // 如果有数据集字段并且字段值存在且不为空
+      if (viewAllDatasetFields.get(view.value?.id)) {
+        if (view.value?.[key]?.length) {
+          // 检查图表字段是否有不在数据集中
+          for (const item of view.value[key]) {
+            if (!viewAllDatasetFields.get(view.value?.id).find(field => field.id === item.id)) {
+              includeDatasetField = true
+              break
+            }
+          }
+        }
+        // 如果有不在数据集中
+        if (includeDatasetField) {
+          showEmpty.value = true
+          break
+        }
       }
-      // 不允许为空， 限制长度
+
+      // 如果没有限制长度，且值为空，标记为空并跳出
+      if (!value['limit'] && view.value?.[key]?.length === 0) {
+        showEmpty.value = true
+        break
+      }
+
+      // 如果有限制长度，且字段长度不足，标记为空并跳出
       if (
-        !value['allowEmpty'] &&
         value['limit'] &&
         (!view.value?.[key] || view.value?.[key]?.length < parseInt(value['limit']))
       ) {
         showEmpty.value = true
-        return false
+        break
       }
+
+      // 如果是table-info类型且字段为空，标记为空并跳出
       if (view.value?.type === 'table-info' && view.value?.[key]?.length === 0) {
         showEmpty.value = true
-        return false
+        break
       }
-    })
+    }
   }
 }
 const changeChartType = () => {
@@ -757,6 +817,15 @@ onMounted(() => {
       initTitle()
     }
   })
+  useEmitt({
+    name: 'chart-type-change-' + view.value.id,
+    callback: () => {
+      const chart = cloneDeep(view.value)
+      chart.container =
+        'container-' + showPosition.value + '-' + view.value.id + '-' + suffixId.value
+      clearExtremum(chart)
+    }
+  })
 
   const { refreshViewEnable, refreshUnit, refreshTime } = view.value
   buildInnerRefreshTimer(refreshViewEnable, refreshUnit, refreshTime)
@@ -842,6 +911,9 @@ const toolTip = computed(() => {
 })
 
 const marginBottom = computed<string | 0>(() => {
+  if (!titleShow.value) {
+    return 0
+  }
   if (titleShow.value || trackMenu.value.length > 0 || state.title_remark.show) {
     return 12 * scale.value + 'px'
   }
@@ -851,10 +923,46 @@ const marginBottom = computed<string | 0>(() => {
 const iconSize = computed<string>(() => {
   return 16 * scale.value + 'px'
 })
+/**
+ * 修改透明度
+ * 边框透明度为0时会是存色，顾配置低透明度
+ * @param {boolean} isBorder 是否为边框
+ */
+const modifyAlpha = isBorder => {
+  const { backgroundColor, backgroundType, backgroundImageEnable, backgroundColorSelect } =
+    element.value.commonBackground
+  // 透明
+  const transparent = 'rgba(0,0,0,0.01)'
+  // 背景图时，设置透明度为0.01
+  if (backgroundType === 'outerImage' && backgroundImageEnable) return transparent
+  // hex转rgba
+  if (backgroundColor.includes('#'))
+    return isBorder || !backgroundColorSelect ? transparent : backgroundColor
+  const match = backgroundColor.match(/rgba\((\d+), (\d+), (\d+), (\d+|0.\d+)\)/)
+  if (!match) return backgroundColor
+  const [r, g, b, a] = match.slice(1).map(Number)
+  // 边框或者不设置背景色时，设置透明度为0.01，否则原透明度
+  return `rgba(${r}, ${g}, ${b}, ${!backgroundColorSelect || isBorder ? 0.01 : a})`
+}
 
 const titleIconStyle = computed(() => {
+  const bgColor = modifyAlpha(false)
+  const borderColor = modifyAlpha(true)
+  // 不显示标题时，图标的样式
+  const style = {
+    position: 'absolute',
+    border: `1px solid ${borderColor}`,
+    'background-color': bgColor,
+    'border-radius': '2px',
+    padding: '0 2px 0 2px',
+    'z-index': 1,
+    top: '2px',
+    left: '2px',
+    ...(trackMenu.value.length ? {} : { display: 'none' })
+  }
   return {
-    color: canvasStyleData.value.component.seniorStyleSetting.linkageIconColor
+    color: canvasStyleData.value.component.seniorStyleSetting.linkageIconColor,
+    ...(titleShow.value ? {} : style)
   }
 })
 const chartHover = ref(false)
@@ -991,14 +1099,24 @@ const titleTooltipWidth = computed(() => {
               /></Icon>
             </el-icon>
           </el-tooltip>
-          <el-tooltip :effect="toolTip" placement="top" content="已设置跳转" v-if="hasJumpIcon">
+          <el-tooltip
+            :effect="toolTip"
+            placement="top"
+            :content="t('visualization.jump_set_tips')"
+            v-if="hasJumpIcon"
+          >
             <el-icon :size="iconSize" class="inner-icon">
               <Icon name="icon_viewinchat_outlined"
                 ><icon_viewinchat_outlined class="svg-icon"
               /></Icon>
             </el-icon>
           </el-tooltip>
-          <el-tooltip :effect="toolTip" placement="top" content="已设置下钻" v-if="hasDrillIcon">
+          <el-tooltip
+            :effect="toolTip"
+            placement="top"
+            :content="t('visualization.drill_set_tips')"
+            v-if="hasDrillIcon"
+          >
             <el-icon :size="iconSize" class="inner-icon">
               <Icon name="icon_drilling_outlined"><icon_drilling_outlined class="svg-icon" /></Icon>
             </el-icon>
@@ -1057,6 +1175,7 @@ const titleTooltipWidth = computed(() => {
         :view="view"
         :show-position="showPosition"
         :suffixId="suffixId"
+        :font-family="fontFamily"
       />
       <chart-component-g2-plot
         :scale="scale"
@@ -1065,6 +1184,7 @@ const titleTooltipWidth = computed(() => {
         :show-position="showPosition"
         :element="element"
         :suffixId="suffixId"
+        :font-family="fontFamily"
         v-else-if="
           showChartView(ChartLibraryType.G2_PLOT, ChartLibraryType.L7_PLOT, ChartLibraryType.L7)
         "
@@ -1081,6 +1201,7 @@ const titleTooltipWidth = computed(() => {
         :show-position="showPosition"
         :element="element"
         :drill-length="drillClickLength"
+        :font-family="fontFamily"
         v-else-if="showChartView(ChartLibraryType.S2)"
         ref="chartComponent"
         @onPointClick="onPointClick"

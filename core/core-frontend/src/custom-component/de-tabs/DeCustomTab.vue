@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 const props = defineProps({
+  hideTitle: Boolean,
   /* 颜色可以单词，如red；也可以是颜色值 */
   // 字体颜色
   fontColor: String,
@@ -37,7 +38,8 @@ const tabClassName = computed(() =>
         props.fontColor && 'fontColor',
         props.activeColor && 'activeColor',
         noBorder.value ? 'noBorder' : props.borderColor && 'borderColor',
-        props.borderActiveColor && 'borderActiveColor'
+        props.borderActiveColor && 'borderActiveColor',
+        props.hideTitle && 'no-header'
       ]
 )
 
@@ -47,6 +49,11 @@ const noBorder = computed(() => props.borderColor === 'none')
 <style lang="less">
 .de-tabs {
   height: 100%;
+  &.no-header {
+    .ed-tabs__header {
+      display: none;
+    }
+  }
   &.ed-tabs--card {
     > .ed-tabs__header {
       height: auto !important;

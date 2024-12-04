@@ -27,10 +27,10 @@ public interface TaskLogApi {
     @PostMapping("/update")
     void updateLog(@RequestBody TaskLogVO logDetail);
 
-    @DeleteMapping("/deleteByJobId/{jobId}")
+    @PostMapping("/deleteByJobId/{jobId}")
     void deleteByJobId(@PathVariable("jobId") String jobId);
 
-    @DeleteMapping("/delete/{logId}")
+    @PostMapping("/delete/{logId}")
     void deleteById(@PathVariable("logId") String logId);
 
     @PostMapping("/clear")

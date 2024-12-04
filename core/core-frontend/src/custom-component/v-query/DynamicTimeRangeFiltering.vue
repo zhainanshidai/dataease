@@ -147,8 +147,15 @@ const formatDate = computed(() => {
     :type="timeInterval"
     :prefix-icon="Calendar"
     :format="formatDate"
+    :popper-class="'custom-dynamic-time-range-filter-popper_class'"
     :range-separator="$t('cron.to')"
     :start-placeholder="$t('datasource.start_time')"
     :end-placeholder="$t('datasource.end_time')"
   />
 </template>
+
+<style lang="less">
+.custom-dynamic-time-range-filter-popper_class {
+  font-family: var(--de-canvas_custom_font);
+}
+</style>

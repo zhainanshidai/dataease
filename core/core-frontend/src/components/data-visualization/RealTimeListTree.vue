@@ -78,6 +78,8 @@ import ComposeShow from '@/components/data-visualization/canvas/ComposeShow.vue'
 import { composeStoreWithOut } from '@/store/modules/data-visualization/compose'
 import RealTimeGroup from '@/components/data-visualization/RealTimeGroup.vue'
 import { contextmenuStoreWithOut } from '@/store/modules/data-visualization/contextmenu'
+import RealTimeTab from '@/components/data-visualization/RealTimeTab.vue'
+import { useI18n } from '@/hooks/web/useI18n'
 const dropdownMore = ref(null)
 const lockStore = lockStoreWithOut()
 
@@ -86,6 +88,7 @@ const snapshotStore = snapshotStoreWithOut()
 const layerStore = layerStoreWithOut()
 const composeStore = composeStoreWithOut()
 const contextmenuStore = contextmenuStoreWithOut()
+const { t } = useI18n()
 
 const { areaData, isCtrlOrCmdDown, isShiftDown, laterIndex } = storeToRefs(composeStore)
 
@@ -397,7 +400,7 @@ const canvasChange = () => {
   <div class="real-time-component-list">
     <button hidden="true" id="close-button"></button>
     <div class="layer-area" @click="areaClick('hidden')" :class="{ activated: hiddenAreaActive }">
-      <span>弹窗区域({{ popComponentData.length }})</span>
+      <span>{{ t('visualization.pop_area') }}({{ popComponentData.length }})</span>
       <el-switch v-model="canvasStyleData.popupAvailable" @change="canvasChange" size="small" />
     </div>
     <el-row class="list-wrap">
@@ -474,7 +477,7 @@ const canvasChange = () => {
       @click="areaClick('base')"
       :class="{ activated: baseAreaActive }"
     >
-      <span>大屏区域({{ baseComponentData.length }})</span>
+      <span>{{ t('visualization.screen_area') }}({{ baseComponentData.length }})</span>
     </div>
     <el-row class="list-wrap">
       <div class="list-container" @contextmenu="handleContextMenu">
@@ -504,7 +507,7 @@ const canvasChange = () => {
               >
                 <div style="width: 22px; padding-left: 3px">
                   <el-icon
-                    v-show="getComponent(index)?.component === 'Group'"
+                    v-show="['Group', 'DeTabs'].includes(getComponent(index)?.component)"
                     class="component-expand"
                     @click="expandClick(getComponent(index))"
                   >
@@ -611,6 +614,14 @@ const canvasChange = () => {
               </div>
               <div v-if="getComponent(index)?.component === 'Group' && getComponent(index)?.expand">
                 <real-time-group :component-data="getComponent(index).propValue"></real-time-group>
+              </div>
+              <div
+                v-if="getComponent(index)?.component === 'DeTabs' && getComponent(index)?.expand"
+              >
+                <real-time-tab
+                  :tab-element="getComponent(index)"
+                  :component-data="getComponent(index).propValue"
+                ></real-time-tab>
               </div>
             </div>
           </template>

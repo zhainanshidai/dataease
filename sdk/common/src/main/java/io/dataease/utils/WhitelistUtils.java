@@ -24,6 +24,7 @@ public class WhitelistUtils {
             "/login/localLogin",
             "/apisix/check",
             "/dekey",
+            "/symmetricKey",
             "/index.html",
             "/model",
             "/xpackModel",
@@ -40,6 +41,7 @@ public class WhitelistUtils {
             "/wecom/qrinfo",
             "/wecom/token",
             "/sysParameter/requestTimeOut",
+            "/sysParameter/defaultSettings",
             "/setting/authentication/status",
             "/sysParameter/ui",
             "/sysParameter/defaultLogin",
@@ -56,6 +58,12 @@ public class WhitelistUtils {
         if (StringUtils.startsWith(requestURI, AuthConstant.DE_API_PREFIX)) {
             requestURI = requestURI.replaceFirst(AuthConstant.DE_API_PREFIX, "");
         }
+        if (StringUtils.startsWith(requestURI, AuthConstant.DE_CASAPI_PREFIX)) {
+            requestURI = requestURI.replaceFirst(AuthConstant.DE_CASAPI_PREFIX, "");
+        }
+        if (StringUtils.startsWith(requestURI, AuthConstant.DE_OIDCAPI_PREFIX)) {
+            requestURI = requestURI.replaceFirst(AuthConstant.DE_OIDCAPI_PREFIX, "");
+        }
         return WHITE_PATH.contains(requestURI)
                 || StringUtils.endsWithAny(requestURI, ".ico", "js", ".css", "svg", "png", "jpg", "js.map", ".otf", ".ttf", ".woff2")
                 || StringUtils.startsWithAny(requestURI, "data:image")
@@ -66,6 +74,7 @@ public class WhitelistUtils {
                 || StringUtils.startsWithAny(requestURI, "/xpackComponent/content")
                 || StringUtils.startsWithAny(requestURI, "/xpackComponent/pluginStaticInfo")
                 || StringUtils.startsWithAny(requestURI, "/geo/")
+                || StringUtils.startsWithAny(requestURI, "/customGeo/")
                 || StringUtils.startsWithAny(requestURI, "/websocket")
                 || StringUtils.startsWithAny(requestURI, "/map/")
                 || StringUtils.startsWithAny(requestURI, "/oauth2/")

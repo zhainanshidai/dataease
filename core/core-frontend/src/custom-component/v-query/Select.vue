@@ -26,6 +26,8 @@ interface SelectConfig {
   displayType: string
   showEmpty: boolean
   id: string
+  sortList?: string[]
+  queryConditionWidth: number
   placeholder: string
   resultMode: number
   displayId: string
@@ -55,6 +57,7 @@ const props = defineProps({
     default: () => {
       return {
         selectValue: '',
+        queryConditionWidth: 0,
         resultMode: 0,
         defaultValue: '',
         displayType: '',
@@ -285,6 +288,25 @@ const setOldMapValue = arr => {
   return defaultValue
 }
 
+const customSort = () => {
+  if (config.value.sortList?.length && config.value.sort === 'customSort') {
+    options.value = [
+      ...options.value
+        .sort(a => {
+          if (config.value.sortList.indexOf(a.value) !== -1) {
+            return -1
+          }
+        })
+        .sort((a, b) => {
+          if (config.value.sortList.indexOf(a.value) === -1) {
+            return 0
+          }
+          return config.value.sortList.indexOf(a.value) - config.value.sortList.indexOf(b.value)
+        })
+    ]
+  }
+}
+
 const handleFieldIdChange = (val: EnumValue) => {
   loading.value = true
   enumValueObj(val)
@@ -311,6 +333,7 @@ const handleFieldIdChange = (val: EnumValue) => {
           checked: oldArr.includes(ele)
         }
       })
+      customSort()
     })
     .finally(() => {
       loading.value = false
@@ -346,16 +369,6 @@ const handleFieldIdChange = (val: EnumValue) => {
 }
 
 const visible = ref(false)
-const visibleChange = (val: boolean) => {
-  setTimeout(() => {
-    visible.value = !val
-    if (!val) {
-      isFromRemote.value = false
-      searchText.value = ''
-      remoteMethod('')
-    }
-  }, 50)
-}
 
 watch(
   () => config.value.showEmpty,
@@ -447,6 +460,11 @@ watch(
   }
 )
 
+watch([() => config.value.sortList], val => {
+  if (!val?.length || config.value.sort !== 'customSort') return
+  customSort()
+})
+
 watch(
   () => config.value.optionValueSource,
   (valNew, newOld) => {
@@ -472,16 +490,6 @@ watch(
 
 const searchText = ref('')
 const isFromRemote = ref(false)
-const clear = () => {
-  remoteMethod('')
-}
-
-const remoteMethod = (query: string) => {
-  if (config.value.optionValueSource !== 1) return
-  isFromRemote.value = true
-  searchText.value = query
-  debounceOptions(1)
-}
 
 watch(
   () => config.value.valueSource,
@@ -518,8 +526,8 @@ const setOptions = (num: number) => {
         handleFieldIdChange({
           queryId: field.id,
           displayId: displayId || field.id,
-          sort,
-          sortId,
+          sort: sort === 'customSort' ? 'asc' : sort,
+          sortId: sort === 'customSort' ? '' : sortId,
           resultMode: config.value.resultMode || 0,
           searchText: searchText.value,
           filter: getCascadeFieldId()
@@ -561,8 +569,18 @@ const init = () => {
   debounceOptions(optionValueSource)
 }
 
+const getCustomWidth = () => {
+  if (placeholder?.value?.placeholderShow) {
+    if (props.config.queryConditionWidth === undefined) {
+      return queryConditionWidth()
+    }
+    return props.config.queryConditionWidth
+  }
+  return 227
+}
+
 const selectStyle = computed(() => {
-  return props.isConfig ? {} : { width: queryConditionWidth() + 'px' }
+  return props.isConfig ? {} : { width: getCustomWidth() + 'px' }
 })
 
 const mult = ref()
@@ -570,6 +588,8 @@ const single = ref()
 
 const getOptionFromCascade = () => {
   if (config.value.optionValueSource !== 1 || ![0, 2, 5].includes(+config.value.displayType)) return
+  config.value.selectValue = config.value.multiple ? [] : undefined
+  selectValue.value = config.value.multiple ? [] : undefined
   debounceOptions(1)
 }
 
@@ -598,7 +618,6 @@ defineExpose({
     v-loading="loading"
     filterable
     @change="handleValueChange"
-    @visible-change="visibleChange"
     :popper-class="
       visible ? 'load-select filter-select-popper_class' : 'filter-select-popper_class'
     "
@@ -621,9 +640,7 @@ defineExpose({
     ref="single"
     :style="selectStyle"
     filterable
-    @clear="clear"
     radio
-    @visible-change="visibleChange"
     :popper-class="
       visible ? 'load-select filter-select-popper_class' : 'filter-select-popper_class'
     "
@@ -640,6 +657,10 @@ defineExpose({
 <style lang="less">
 .filter-select-popper_class {
   --ed-fill-color-light: #f5f7fa47;
+  font-family: var(--de-canvas_custom_font);
+  .ed-vl__window.ed-select-dropdown__list {
+    min-width: 200px;
+  }
   .ed-select-dropdown__option-item {
     .ed-checkbox__label:hover {
       color: #1f2329;

@@ -10,7 +10,8 @@ import {
   getTheme,
   getTooltip,
   getXAxis,
-  getYAxis
+  getYAxis,
+  getConditions
 } from '@/views/chart/components/js/panel/common/common_antv'
 import {
   AntVAbstractChartView,
@@ -169,6 +170,14 @@ export abstract class G2PlotChartView<
 
   public setupSubSeriesColor(chart: ChartObj, data?: any[]): ChartBasicStyle['seriesColor'] {
     return undefined
+  }
+
+  protected configConditions(chart: Chart, options: O) {
+    const annotations = getConditions(chart)
+    return {
+      ...options,
+      annotations: [...annotations, ...((options as unknown as Options).annotations || [])]
+    }
   }
 
   /**

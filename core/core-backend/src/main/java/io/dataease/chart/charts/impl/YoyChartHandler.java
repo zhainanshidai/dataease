@@ -120,7 +120,7 @@ public class YoyChartHandler extends DefaultChartHandler {
             expandedResult.setQuerySql(originSql);
         }
         // 同环比数据排序
-        expandedResult.setOriginData(sortData(view, expandedResult.getOriginData(),formatResult));
+        expandedResult.setOriginData(sortData(view, expandedResult.getOriginData(), formatResult));
         return expandedResult;
     }
 
@@ -128,7 +128,14 @@ public class YoyChartHandler extends DefaultChartHandler {
         // 维度排序
         List<ChartViewFieldDTO> xAxisSortList = view.getXAxis().stream().filter(x -> !StringUtils.equalsIgnoreCase("none", x.getSort())).toList();
         // 指标排序
-        List<ChartViewFieldDTO> yAxisSortList = view.getYAxis().stream().filter(y -> !StringUtils.equalsIgnoreCase("none", y.getSort())).toList();
+        List<ChartViewFieldDTO> yAxisSortList = view.getYAxis().stream().filter(y -> {
+            //需要针对区间条形图的时间类型判断一下
+            if (StringUtils.equalsIgnoreCase("bar-range", view.getType()) && StringUtils.equalsIgnoreCase(y.getGroupType(), "d") && y.getDeType() == 1) {
+                return false;
+            } else {
+                return !StringUtils.equalsIgnoreCase("none", y.getSort());
+            }
+        }).toList();
         // 不包含维度排序时，指标排序生效
         if (!data.isEmpty() && CollectionUtils.isEmpty(xAxisSortList) && CollectionUtils.isNotEmpty(yAxisSortList)) {
             // 指标排序仅第一个生效

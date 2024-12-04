@@ -222,14 +222,17 @@ public class DatasetGroupManage {
     }
 
 
-    @XpackInteract(value = "authResourceTree", replace = true)
+    @XpackInteract(value = "authResourceTree", replace = true, invalid = true)
     public List<BusiNodeVO> tree(BusiNodeRequest request) {
 
         QueryWrapper<Object> queryWrapper = new QueryWrapper<>();
         if (ObjectUtils.isNotEmpty(request.getLeaf())) {
             queryWrapper.eq("node_type", request.getLeaf() ? "dataset" : "folder");
         }
-
+        String info = CommunityUtils.getInfo();
+        if (StringUtils.isNotBlank(info)) {
+            queryWrapper.notExists(String.format(info, "core_dataset_group.id"));
+        }
         queryWrapper.orderByDesc("create_time");
         List<DataSetNodePO> pos = coreDataSetExtMapper.query(queryWrapper);
         List<DataSetNodeBO> nodes = new ArrayList<>();
@@ -285,7 +288,7 @@ public class DatasetGroupManage {
     }
 
     private DataSetNodeBO convert(DataSetNodePO po) {
-        return new DataSetNodeBO(po.getId(), po.getName(), StringUtils.equals(po.getNodeType(), leafType), 7, po.getPid(), 0);
+        return new DataSetNodeBO(po.getId(), po.getName(), StringUtils.equals(po.getNodeType(), leafType), 9, po.getPid(), 0);
     }
 
     public void checkName(DatasetGroupInfoDTO dto) {

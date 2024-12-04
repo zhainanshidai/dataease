@@ -139,6 +139,17 @@
             and popi.checked=1
     </select>
 
+        <select id="getVisualizationOuterParamsInfoBase" resultType="io.dataease.visualization.dao.auto.entity.VisualizationOuterParamsInfo">
+           SELECT
+           	vopi.param_name,
+           	vopi.params_info_id
+           FROM
+           	visualization_outer_params_info vopi
+           	INNER JOIN visualization_outer_params vop ON vop.params_id = vopi.params_id
+           WHERE
+           	vop.visualization_id = #{visualizationId}
+        </select>
+
       <select id="queryDsWithVisualizationId"  resultMap="BaseDsResultMapDTO">
           SELECT DISTINCT
           	cdg.*,#{visualizationId} as visualizationId

@@ -335,9 +335,6 @@ public class ExcelUtils {
             Double d = Double.valueOf(value);
             double eps = 1e-10;
             if (d - Math.floor(d) < eps) {
-                if (value.length() > 1 && value.startsWith("0")) {
-                    return "TEXT";
-                }
                 return "LONG";
             } else {
                 return "DOUBLE";
@@ -440,6 +437,7 @@ public class ExcelUtils {
                     tableFiled.setFieldType(null);
                     tableFiled.setName(s);
                     tableFiled.setOriginName(s);
+                    tableFiled.setChecked(true);
                     fields.add(tableFiled);
                 }
                 List<String[]> data = new ArrayList<>(noModelDataListener.getData());
@@ -488,6 +486,7 @@ public class ExcelUtils {
                 tableFiled.setName(filedName);
                 tableFiled.setOriginName(filedName);
                 tableFiled.setFieldType(null);
+                tableFiled.setChecked(true);
                 fields.add(tableFiled);
             }
 

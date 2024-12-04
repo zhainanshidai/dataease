@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="existLinkage && !dvMainStore.mobileInPc"
+    v-if="existLinkage && (!dvMainStore.mobileInPc || isMobile())"
     class="bar-main-right"
     :class="{ 'bar-main-edit-right': dvEditMode }"
     @mousedown="handOptBarMousedown"
@@ -19,7 +19,7 @@ import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { computed } from 'vue'
 import { isMainCanvas } from '@/utils/canvasUtils'
 import { useEmitt } from '@/hooks/web/useEmitt'
-
+import { isMobile } from '@/utils/utils'
 const dvMainStore = dvMainStoreWithOut()
 
 const props = defineProps({
@@ -49,7 +49,7 @@ const clearAllLinkage = () => {
 }
 
 const dvEditMode = computed(() => {
-  return dvMainStore.dvInfo.type === 'dataV' && dvMainStore.editMode === 'preview'
+  return dvMainStore.dvInfo.type === 'dataV' && dvMainStore.editMode === 'preview' && !isMobile()
 })
 const existLinkage = computed(() => {
   if (isMainCanvas(props.canvasId)) {

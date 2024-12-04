@@ -166,7 +166,9 @@
                `delete_flag`,
                `delete_time`,
                `delete_by`,
-               `version`
+               `version`,
+               `content_id`,
+               `check_version`
         FROM data_visualization_info
         where data_visualization_info.delete_flag = 0
           and data_visualization_info.id = #{dvId}

@@ -29,17 +29,15 @@ const cardInfoList = [
     :show-arrow="false"
     popper-class="top-popover"
     placement="bottom-end"
-    width="208"
+    width="210"
     trigger="hover"
   >
-    <el-row>
-      <top-doc-card
-        :span="12"
-        v-for="(item, index) in cardInfoList"
-        :key="index"
-        :card-info="item"
-      ></top-doc-card>
-    </el-row>
+    <top-doc-card
+      :span="12"
+      v-for="(item, index) in cardInfoList"
+      :key="index"
+      :card-info="item"
+    ></top-doc-card>
     <template #reference>
       <div
         class="sys-setting"
@@ -75,6 +73,11 @@ const cardInfoList = [
 
 <style lang="less">
 .top-popover {
-  padding: 0 0 16px 0 !important;
+  display: flex;
+  padding: 8px !important;
+  flex-wrap: wrap;
+  .doc-card {
+    margin: auto;
+  }
 }
 </style>

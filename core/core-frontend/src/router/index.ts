@@ -37,13 +37,6 @@ export const routes: AppRouteRecordRaw[] = [
     ]
   },
   {
-    path: '/notSupport',
-    name: 'notSupport',
-    hidden: true,
-    meta: {},
-    component: () => import('@/views/mobile/panel/NotSupport.vue')
-  },
-  {
     path: '/login',
     name: 'login',
     hidden: true,

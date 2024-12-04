@@ -87,15 +87,20 @@ public interface DatasourceApi {
     @Operation(summary = "删除")
     void delete(@PathVariable("datasourceId") Long datasourceId) throws DEException;
 
-    @DePermit({"#p0+':read'"})
+    @DePermit({"#p0+':manage'"})
     @GetMapping("/get/{datasourceId}")
     @Operation(summary = "数据源详情")
     DatasourceDTO get(@PathVariable("datasourceId") Long datasourceId) throws DEException;
 
-    @DePermit({"#p0+':read'"})
+    @DePermit({"#p0+':manage'"})
     @GetMapping("/hidePw/{datasourceId}")
     @Operation(summary = "数据源详情")
     DatasourceDTO hidePw(@PathVariable("datasourceId") Long datasourceId) throws DEException;
+
+    @DePermit({"#p0+':read'"})
+    @GetMapping("/getSimpleDs/{datasourceId}")
+    @Operation(summary = "数据源详情")
+    DatasourceDTO getSimpleDs(@PathVariable("datasourceId") Long datasourceId) throws DEException;
 
 
     @PostMapping("/getTableField")
@@ -153,5 +158,8 @@ public interface DatasourceApi {
     String getName(Long datasourceId) throws DEException;
 
     List<DatasourceDTO> innerList(List<Long> ids, List<String> types) throws DEException;
+
+    @GetMapping("/simple/{id}")
+    DsSimpleVO simple(@PathVariable("id") Long id);
 
 }

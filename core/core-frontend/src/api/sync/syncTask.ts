@@ -208,7 +208,7 @@ export const addApi = (data: ITaskInfoInsertReq) => {
 }
 
 export const removeApi = (taskId: string) => {
-  return request.delete({ url: `/sync/task/remove/${taskId}` })
+  return request.post({ url: `/sync/task/remove/${taskId}` })
 }
 
 export const batchRemoveApi = (taskIds: string[]) => {

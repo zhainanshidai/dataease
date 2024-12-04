@@ -1,6 +1,22 @@
 import { BusiTreeNode } from '@/models/tree/TreeNode'
 import _ from 'lodash'
 
+export function treeParentWeight(tree: BusiTreeNode[], pWeight) {
+  const pWeightResult = {}
+  weightCheckCircle(tree, pWeightResult, pWeight)
+  console.log('===test===' + JSON.stringify(pWeightResult))
+  return pWeightResult
+}
+
+export function weightCheckCircle(tree: BusiTreeNode[], pWeightResult, pWeight) {
+  _.forEach(tree, node => {
+    pWeightResult[node.id] = pWeight
+    if (node.children && node.children.length > 0) {
+      weightCheckCircle(node.children, pWeightResult, node.weight)
+    }
+  })
+}
+
 export default function treeSort(tree: BusiTreeNode[], sortType: string) {
   const result = _.cloneDeep(tree)
   sortCircle(result, sortType)
@@ -14,7 +30,6 @@ export function sortCircle(tree: BusiTreeNode[], sortType: string) {
       sortCircle(node.children, sortType)
     }
   })
-  return tree
 }
 
 export const sortPer = (subTree: BusiTreeNode[], sortType: string) => {

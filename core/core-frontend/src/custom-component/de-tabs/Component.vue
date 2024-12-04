@@ -2,7 +2,12 @@
   <div
     v-if="state.tabShow"
     style="width: 100%; height: 100%"
-    :class="[headClass, `ed-tabs-${curThemes}`]"
+    :class="[
+      headClass,
+      `ed-tabs-${curThemes}`,
+      { 'title-hidde-tab': !showTabTitleFlag },
+      { 'title-show-tab': showTabTitleFlag }
+    ]"
     class="custom-tabs-head"
     ref="tabComponentRef"
   >
@@ -14,6 +19,7 @@
       :active-color="activeColor"
       :border-color="noBorderColor"
       :border-active-color="borderActiveColor"
+      :hide-title="!showTabTitleFlag"
     >
       <template :key="tabItem.name" v-for="tabItem in element.propValue">
         <el-tab-pane
@@ -36,18 +42,18 @@
                   <el-icon v-if="isEdit"><ArrowDown /></el-icon>
                 </span>
                 <template #dropdown>
-                  <el-dropdown-menu>
+                  <el-dropdown-menu :style="{ 'font-family': fontFamily }">
                     <el-dropdown-item :command="beforeHandleCommand('editTitle', tabItem)">
-                      编辑标题
+                      {{ t('visualization.edit_title') }}
                     </el-dropdown-item>
                     <el-dropdown-item :command="beforeHandleCommand('copyCur', tabItem)">
-                      复制
+                      {{ t('visualization.copy') }}
                     </el-dropdown-item>
                     <el-dropdown-item
                       v-if="element.propValue.length > 1"
                       :command="beforeHandleCommand('deleteCur', tabItem)"
                     >
-                      删除
+                      {{ t('visualization.delete') }}
                     </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -71,6 +77,7 @@
           :canvas-id="element.id + '--' + tabItem.name"
           :class="moveActive ? 'canvas-move-in' : ''"
           :canvas-active="editableTabsValue === tabItem.name"
+          :font-family="fontFamily"
         ></de-canvas>
         <de-preview
           v-else
@@ -84,6 +91,7 @@
           :preview-active="editableTabsValue === tabItem.name"
           :show-position="showPosition"
           :outer-scale="scale"
+          :font-family="fontFamily"
           :outer-search-count="searchCount"
         ></de-preview>
       </div>
@@ -138,11 +146,13 @@ import { getPanelAllLinkageInfo } from '@/api/visualization/linkage'
 import { dataVTabComponentAdd, groupSizeStyleAdaptor } from '@/utils/style'
 import { deepCopyTabItemHelper } from '@/store/modules/data-visualization/copy'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
+import { useI18n } from '@/hooks/web/useI18n'
 const dvMainStore = dvMainStoreWithOut()
 const snapshotStore = snapshotStoreWithOut()
 const { tabMoveInActiveId, bashMatrixInfo, editMode, mobileInPc } = storeToRefs(dvMainStore)
 const tabComponentRef = ref(null)
 let carouselTimer = null
+const { t } = useI18n()
 
 const props = defineProps({
   canvasStyleData: {
@@ -184,6 +194,12 @@ const props = defineProps({
     type: Number,
     required: false,
     default: 0
+  },
+  // 仪表板字体
+  fontFamily: {
+    type: String,
+    required: false,
+    default: 'inherit'
   }
 })
 const {
@@ -210,6 +226,14 @@ const editableTabsValue = ref(null)
 // 无边框
 const noBorderColor = ref('none')
 let currentInstance
+
+const showTabTitleFlag = computed(() => {
+  if (element.value && element.value.style && element.value.style?.showTabTitle === false) {
+    return false
+  } else {
+    return element.value.style?.showTabTitle
+  }
+})
 
 const isEditMode = computed(() => editMode.value === 'edit' && isEdit.value && !mobileInPc.value)
 const curThemes = isDashboard() ? 'light' : 'dark'
@@ -249,7 +273,7 @@ function addTab() {
   const newName = guid()
   const newTab = {
     name: newName,
-    title: '新建Tab',
+    title: t('visualization.new_tab'),
     componentData: [],
     closable: true
   }
@@ -345,7 +369,7 @@ const componentMoveIn = component => {
           dvMainStore.deleteComponent(curIndex)
           dvMainStore.setCurComponent({ component: null, index: null })
           component.canvasId = element.value.id + '--' + tabItem.name
-          dataVTabComponentAdd(component, element.value.style)
+          dataVTabComponentAdd(component, element.value)
           tabItem.componentData.push(component)
         }
       }
@@ -537,9 +561,21 @@ onBeforeMount(() => {
 })
 </script>
 <style lang="less" scoped>
-:deep(.ed-tabs__content) {
-  height: calc(100% - 46px) !important;
+.title-hidde-tab {
+  :deep(.ed-tabs__content) {
+    height: 100% !important;
+  }
 }
+
+.title-show-tab {
+  :deep(.ed-tabs__content) {
+    height: calc(100% - 46px) !important;
+  }
+  :deep(.ed-tabs__item) {
+    font-family: inherit;
+  }
+}
+
 .ed-tabs-dark {
   :deep(.ed-tabs__new-tab) {
     margin-right: 25px;

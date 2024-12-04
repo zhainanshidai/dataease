@@ -33,13 +33,13 @@ public interface DatasourceDriverApi {
     @PostMapping("/update")
     DriveDTO update(@RequestBody DriveDTO datasourceDrive);
 
-    @DeleteMapping("/delete/{driverId}")
+    @PostMapping("/delete/{driverId}")
     void delete(@PathVariable("driverId") String driverId);
 
     @GetMapping("/listDriverJar/{driverId}")
     List<DriveJarDTO> listDriverJar(@PathVariable("driverId") String driverId);
 
-    @DeleteMapping("/deleteDriverJar/{jarId}")
+    @PostMapping("/deleteDriverJar/{jarId}")
     void deleteDriverJar(@PathVariable("jarId") String jarId);
 
     @PostMapping("/uploadJar")

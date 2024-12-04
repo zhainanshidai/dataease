@@ -3,7 +3,7 @@
     <CommonAttr :themes="themes" :element="curComponent">
       <el-collapse-item
         :effect="themes"
-        title="链接信息"
+        :title="t('visualization.link_info')"
         name="frameLinks"
         v-if="curComponent && curComponent.frameLinks && !mobileInPc"
       >
@@ -18,8 +18,10 @@ import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import CommonAttr from '@/custom-component/common/CommonAttr.vue'
 import { storeToRefs } from 'pinia'
 import FrameLinks from '@/custom-component/de-frame/FrameLinks.vue'
+import { useI18n } from '@/hooks/web/useI18n'
 const dvMainStore = dvMainStoreWithOut()
 const { curComponent, mobileInPc } = storeToRefs(dvMainStore)
+const { t } = useI18n()
 const props = withDefaults(
   defineProps<{
     themes?: EditorTheme

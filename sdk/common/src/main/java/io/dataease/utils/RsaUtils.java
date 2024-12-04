@@ -8,9 +8,11 @@ import io.dataease.rsa.manage.RsaManage;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -176,7 +178,7 @@ public class RsaUtils {
         return pk + separator + aesKey;
     }
 
-    private static final String IV_KEY = "0000000000000000";
+    public static final String IV_KEY = "0000000000000000";
 
     private static String generateAesKey() {
         return RandomStringUtils.randomAlphanumeric(16);
@@ -199,5 +201,54 @@ public class RsaUtils {
             throw new RuntimeException(e);
         }
 
+    }
+
+
+    private static final String ALGORITHM = "AES";
+    public static String symmetricKey = null;
+    private static final int KEY_SIZE = 128;
+
+
+    public static String generateSymmetricKey() {
+        try {
+            if (StringUtils.isEmpty(symmetricKey)) {
+                KeyGenerator keyGenerator = KeyGenerator.getInstance(ALGORITHM);
+                keyGenerator.init(KEY_SIZE, new SecureRandom());
+                SecretKey secretKey = keyGenerator.generateKey();
+                symmetricKey = Base64.getEncoder().encodeToString(secretKey.getEncoded());
+            }
+            return symmetricKey;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String symmetricEncrypt(String data) {
+        try {
+            byte[] iv = IV_KEY.getBytes(StandardCharsets.UTF_8);
+            IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            SecretKeySpec secretKeySpec = new SecretKeySpec(Base64.getDecoder().decode(generateSymmetricKey()), ALGORITHM);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec);
+            byte[] ciphertext = cipher.doFinal(data.getBytes("UTF-8"));
+            return Base64.getEncoder().encodeToString(ciphertext);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String symmetricDecrypt(String data) {
+        try {
+            byte[] iv = IV_KEY.getBytes(StandardCharsets.UTF_8);
+            IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
+            SecretKeySpec secretKeySpec = new SecretKeySpec(Base64.getDecoder().decode(generateSymmetricKey()), ALGORITHM);
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec);
+            byte[] decodedCiphertext = Base64.getDecoder().decode(data);
+            byte[] decryptedText = cipher.doFinal(decodedCiphertext);
+            return new String(decryptedText, "UTF-8");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

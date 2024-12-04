@@ -18,8 +18,10 @@ import { iconFieldMap } from '@/components/icon-group/field-list'
 
 export interface Field {
   name: string
+  length: number
   value: Array<{}>
   checked: boolean
+  primaryKey: boolean
   children?: Array<{}>
 }
 
@@ -29,6 +31,7 @@ export interface ApiItem {
   type: string
   deTableName?: string
   url: string
+  copy: boolean
   method: string
   request: ApiRequest
   fields: Field[]
@@ -46,6 +49,8 @@ export interface JsonField {
   children: null
   name: string
   checked: false
+  primaryKey: false
+  length: string
   extField: number
   jsonPath: string
   type: string
@@ -61,6 +66,7 @@ const originFieldItem = reactive({
 
 let apiItemList = reactive<ApiConfiguration[]>([])
 let paramsList = reactive<ApiConfiguration[]>([])
+let fields = reactive<Field[]>([])
 
 let apiItem = reactive<ApiItem>({
   status: '',
@@ -157,13 +163,22 @@ const rule = reactive<FormRules>({
   ]
 })
 const activeName = ref('table')
+const editItem = ref(false)
+const copyItem = ref(false)
+const copyDs = ref(false)
 provide('api-active-name', activeName)
-const initApiItem = (val: ApiItem, from, name) => {
+const initApiItem = (val: ApiItem, from, name, edit) => {
+  copyItem.value = val.copy
+  copyDs.value = from.copy
   activeName.value = name
+  editItem.value = edit
   apiItemList = from.apiConfiguration
-  paramsList = from.paramsConfiguration
-  if (val.type !== 'params') {
-    valueList.value = []
+  fields = val.fields
+  if (from.paramsConfiguration) {
+    paramsList = from.paramsConfiguration
+  }
+  valueList.value = []
+  if (val.type !== 'params' && paramsList) {
     for (let i = 0; i < paramsList.length; i++) {
       valueList.value = valueList.value.concat(paramsList[i].fields)
     }
@@ -236,10 +251,65 @@ const saveItem = () => {
       }
     }
   }
+
   for (let i = 0; i < apiItem.fields.length - 1; i++) {
     for (let j = i + 1; j < apiItem.fields.length; j++) {
       if (apiItem.fields[i].name === apiItem.fields[j].name) {
         ElMessage.error(apiItem.fields[i].name + ', ' + t('datasource.has_repeat_field_name'))
+        return
+      }
+    }
+  }
+  if (editItem.value) {
+    let msg = ''
+    for (let i = 0; i < apiItem.fields.length; i++) {
+      if (apiItem.fields[i].primaryKey) {
+        let find = false
+        for (let j = 0; j < fields.length; j++) {
+          if (fields[j].name === apiItem.fields[i].name && fields[j].primaryKey) {
+            find = true
+          }
+        }
+        if (!find) {
+          msg = msg + ' ' + apiItem.fields[i].name
+        }
+      }
+    }
+    for (let i = 0; i < fields.length; i++) {
+      if (fields[i].primaryKey) {
+        let find = false
+        for (let j = 0; j < apiItem.fields.length; j++) {
+          if (fields[i].name === apiItem.fields[j].name && apiItem.fields[j].primaryKey) {
+            find = true
+          }
+        }
+        if (!find) {
+          msg = msg + ' ' + fields[i].name
+        }
+      }
+    }
+    if (msg !== '' && !(copyDs.value || copyItem.value)) {
+      ElMessage.error(t('datasource.primary_key_change') + msg)
+      return
+    }
+    for (let i = 0; i < apiItem.fields.length; i++) {
+      if (
+        apiItem.fields[i].primaryKey &&
+        !apiItem.fields[i].length &&
+        apiItem.fields[i].deExtractType === 0
+      ) {
+        ElMessage.error(t('datasource.primary_key_length') + apiItem.fields[i].name)
+        return
+      }
+    }
+  } else {
+    for (let i = 0; i < apiItem.fields.length; i++) {
+      if (
+        apiItem.fields[i].primaryKey &&
+        !apiItem.fields[i].length &&
+        apiItem.fields[i].deExtractType === 0
+      ) {
+        ElMessage.error(t('datasource.primary_key_length') + apiItem.fields[i].name)
         return
       }
     }
@@ -339,6 +409,30 @@ const disabledByChildren = item => {
   }
 }
 
+const disabledFieldLength = item => {
+  if (item.hasOwnProperty('children') && item.children.length > 0) {
+    return true
+  } else {
+    return item.deExtractType !== 0
+  }
+}
+
+const disabledSetKey = item => {
+  if (item.hasOwnProperty('children') && item.children.length > 0) {
+    return true
+  }
+  if (copyItem.value || copyDs.value) {
+    return false
+  }
+  if (editItem.value) {
+    return true
+  }
+  if (!item.checked) {
+    return true
+  }
+  return false
+}
+
 const disabledChangeFieldByChildren = item => {
   if (apiItem.type == 'params') {
     return true
@@ -347,6 +441,12 @@ const disabledChangeFieldByChildren = item => {
     return true
   } else {
     return false
+  }
+}
+
+const deExtractTypeChange = item => {
+  if (item.deExtractType !== 0) {
+    item.length = ''
   }
 }
 const previewData = () => {
@@ -449,7 +549,7 @@ defineExpose({
     "
     v-model="edit_api_item"
     custom-class="api-datasource-drawer"
-    size="840px"
+    size="1000px"
     :before-close="closeEditItem"
     direction="rtl"
   >
@@ -619,7 +719,7 @@ defineExpose({
               prop="originName"
               :label="t('datasource.parse_filed')"
               :show-overflow-tooltip="true"
-              width="255"
+              width="200"
             >
               <template #default="scope">
                 <el-checkbox
@@ -646,7 +746,7 @@ defineExpose({
             <el-table-column
               prop="deExtractType"
               :label="t('datasource.field_type')"
-              :disabled="apiItem.type == 'params'"
+              :disabled="apiItem.type === 'params'"
             >
               <template #default="scope">
                 <el-select
@@ -654,6 +754,7 @@ defineExpose({
                   :disabled="disabledChangeFieldByChildren(scope.row)"
                   class="select-type"
                   style="display: inline-block; width: 120px"
+                  @change="deExtractTypeChange(scope.row)"
                 >
                   <template #prefix>
                     <el-icon>
@@ -688,6 +789,44 @@ defineExpose({
                     }}</span>
                   </el-option>
                 </el-select>
+              </template>
+            </el-table-column>
+
+            <el-table-column
+              prop="length"
+              :label="t('datasource.length')"
+              v-if="apiItem.type !== 'params'"
+            >
+              <template #default="scope">
+                <el-input-number
+                  :disabled="disabledFieldLength(scope.row)"
+                  v-model="scope.row.length"
+                  autocomplete="off"
+                  step-strictly
+                  class="text-left edit-all-line"
+                  :min="1"
+                  :max="512"
+                  :placeholder="t('common.inputText')"
+                  controls-position="right"
+                  type="number"
+                />
+              </template>
+            </el-table-column>
+
+            <el-table-column
+              prop="primaryKey"
+              class-name="checkbox-table"
+              :label="t('datasource.set_key')"
+              v-if="apiItem.type !== 'params'"
+              width="100"
+            >
+              <template #default="scope">
+                <el-checkbox
+                  :key="scope.row.jsonPath"
+                  v-model="scope.row.primaryKey"
+                  :disabled="disabledSetKey(scope.row)"
+                >
+                </el-checkbox>
               </template>
             </el-table-column>
           </el-table>

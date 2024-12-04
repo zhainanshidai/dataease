@@ -4,6 +4,7 @@ import icon_add_outlined from '@/assets/svg/icon_add_outlined.svg'
 import dvCopyDark from '@/assets/svg/dv-copy-dark.svg'
 import dvDelete from '@/assets/svg/dv-delete.svg'
 import dvMove from '@/assets/svg/dv-move.svg'
+import { treeDraggbleChart } from '@/utils/treeDraggbleChart'
 import dvRename from '@/assets/svg/dv-rename.svg'
 import dvDashboardSpine from '@/assets/svg/dv-dashboard-spine.svg'
 import dvScreenSpine from '@/assets/svg/dv-screen-spine.svg'
@@ -38,14 +39,14 @@ import { interactiveStoreWithOut } from '@/store/modules/interactive'
 import { useShareStoreWithOut } from '@/store/modules/share'
 const shareStore = useShareStoreWithOut()
 const interactiveStore = interactiveStoreWithOut()
-import router from '@/router'
 import { useI18n } from '@/hooks/web/useI18n'
 import _ from 'lodash'
 import DeResourceCreateOptV2 from '@/views/common/DeResourceCreateOptV2.vue'
 import { useCache } from '@/hooks/web/useCache'
 import { findParentIdByChildIdRecursive } from '@/utils/canvasUtils'
 import { XpackComponent } from '@/components/plugin'
-import treeSort from '@/utils/treeSortUtils'
+import treeSort, { treeParentWeight } from '@/utils/treeSortUtils'
+import router from '@/router'
 const { wsCache } = useCache()
 
 const dvMainStore = dvMainStoreWithOut()
@@ -75,7 +76,8 @@ const anyManage = ref(false)
 const { curCanvasType, showPosition } = toRefs(props)
 const resourceLabel =
   curCanvasType.value === 'dataV' ? t('work_branch.big_data_screen') : t('work_branch.dashboard')
-const newResourceLabel = '新建' + resourceLabel
+const newResourceLabel =
+  curCanvasType.value === 'dataV' ? t('visualization.new_screen') : t('visualization.new_dashboard')
 const selectedNodeKey = ref(null)
 const filterText = ref(null)
 const expandedArray = ref([])
@@ -84,22 +86,23 @@ const resourceGroupOpt = ref()
 const resourceCreateOpt = ref()
 const returnMounted = ref(false)
 const state = reactive({
+  pWeightMap: {},
   curSortType: 'time_desc',
   resourceTree: [] as BusiTreeNode[],
   originResourceTree: [] as BusiTreeNode[],
   folderMenuList: [
     {
-      label: '移动到',
+      label: t('visualization.move_to'), //'移动到'
       command: 'move',
       svgName: dvMove
     },
     {
-      label: '重命名',
+      label: t('visualization.rename'), //'重命名'
       command: 'rename',
       svgName: dvRename
     },
     {
-      label: '删除',
+      label: t('visualization.delete'), // 删除
       command: 'delete',
       svgName: dvDelete,
       divided: true
@@ -107,20 +110,20 @@ const state = reactive({
   ],
   sortType: [
     {
-      label: '按时间升序',
+      label: t('visualization.time_asc'), //'按时间升序'
       value: 'time_asc'
     },
     {
-      label: '按时间降序',
+      label: t('visualization.time_desc'), //'按时间降序'
       value: 'time_desc'
     },
     {
-      label: '按名称升序',
+      label: t('visualization.name_asc'), //'按名称升序'
       value: 'name_asc'
     },
     {
-      label: '按名称降序',
-      value: 'time_asc'
+      label: t('visualization.name_desc'), //'按名称降序'
+      value: 'name_desc'
     }
   ],
   templateCreatePid: 0
@@ -135,7 +138,7 @@ const isEmbedded = computed(() => appStore.getIsDataEaseBi || appStore.getIsIfra
 const resourceTypeList = computed(() => {
   const list = [
     {
-      label: '空白新建',
+      label: t('work_branch.new_empty'), //'空白新建',
       svgName: dvSvgType.value,
       command: 'newLeaf'
     },
@@ -145,7 +148,7 @@ const resourceTypeList = computed(() => {
       command: 'newFromTemplate'
     },
     {
-      label: '新建文件夹',
+      label: t('work_branch.new_folder'), //'新建文件夹'
       divided: true,
       svgName: dvFolder,
       command: 'newFolder'
@@ -153,35 +156,62 @@ const resourceTypeList = computed(() => {
   ]
   return list
 })
+const { handleDrop, allowDrop, handleDragStart } = treeDraggbleChart(
+  state,
+  'resourceTree',
+  curCanvasType.value
+)
 
-const menuList = computed(() => {
-  const list = [
-    {
-      label: '复制',
-      command: 'copy',
-      svgName: dvCopyDark
-    },
-    {
-      label: '移动到',
-      command: 'move',
-      svgName: dvMove
-    },
-    {
-      label: '重命名',
-      command: 'rename',
-      svgName: dvRename
-    },
-    {
-      label: '删除',
-      command: 'delete',
-      svgName: dvDelete,
-      divided: true
-    }
-  ]
-  return list
-})
+const menuListWeight = id => {
+  const pWeight = state.pWeightMap[id]
+  return pWeight < 7 ? menuList : menuListWithCopy
+}
+const menuListWithCopy = [
+  {
+    label: t('visualization.copy'), //'复制',
+    command: 'copy',
+    svgName: dvCopyDark
+  },
+  {
+    label: t('visualization.move_to'), //'移动到',
+    command: 'move',
+    svgName: dvMove
+  },
+  {
+    label: t('visualization.rename'), //'重命名',
+    command: 'rename',
+    svgName: dvRename
+  },
+  {
+    label: t('visualization.delete'), //'删除',
+    command: 'delete',
+    svgName: dvDelete,
+    divided: true
+  }
+]
+const menuList = [
+  {
+    label: t('visualization.move_to'), //'移动到',
+    command: 'move',
+    svgName: dvMove
+  },
+  {
+    label: t('visualization.rename'), //'重命名',
+    command: 'rename',
+    svgName: dvRename
+  },
+  {
+    label: t('visualization.delete'), //'删除',
+    command: 'delete',
+    svgName: dvDelete,
+    divided: true
+  }
+]
 
-const dvId = embeddedStore.dvId || router.currentRoute.value.query.dvId
+const infoId = wsCache.get(curCanvasType.value === 'dashboard' ? 'db-info-id' : 'dv-info-id')
+const routerDvId = router.currentRoute.value.query.dvId
+const dvId = embeddedStore.dvId || infoId || routerDvId
+wsCache.delete(curCanvasType.value === 'dashboard' ? 'db-info-id' : 'dv-info-id')
 if (dvId && showPosition.value === 'preview') {
   selectedNodeKey.value = dvId
   returnMounted.value = true
@@ -228,14 +258,16 @@ const getTree = async () => {
   ) {
     dvMainStore.resetDvInfo()
   }
+  let curSortType = sortList[Number(wsCache.get('TreeSort-backend')) ?? 1].value
+  curSortType = wsCache.get(`TreeSort-${curCanvasType.value}`) ?? curSortType
   if (nodeData.length && nodeData[0]['id'] === '0' && nodeData[0]['name'] === 'root') {
     state.originResourceTree = nodeData[0]['children'] || []
-    sortTypeChange(state.curSortType)
+    sortTypeChange(curSortType)
     afterTreeInit()
     return
   }
   state.originResourceTree = nodeData
-  sortTypeChange(state.curSortType)
+  sortTypeChange(curSortType)
   afterTreeInit()
 }
 
@@ -256,6 +288,7 @@ function flatTree(tree: BusiTreeNode[]) {
 }
 
 const afterTreeInit = () => {
+  state.pWeightMap = treeParentWeight(state.originResourceTree, rootManage.value ? 9 : 0)
   mounted.value = true
   if (selectedNodeKey.value && returnMounted.value) {
     expandedArray.value = getDefaultExpandedKeys()
@@ -274,24 +307,22 @@ const afterTreeInit = () => {
 }
 
 const copyLoading = ref(false)
-
+const openType = wsCache.get('open-backend') === '1' ? '_self' : '_blank'
 const emit = defineEmits(['nodeClick'])
 
 const operation = (cmd: string, data: BusiTreeNode, nodeType: string) => {
   if (cmd === 'delete') {
-    const msg = data.leaf ? '' : '删除后，此文件夹下的所有资源都会被删除，请谨慎操作。'
-    ElMessageBox.confirm(
-      data.leaf ? '确定删除该' + resourceLabel + '吗？' : '确定删除该文件夹吗？',
-      {
-        confirmButtonType: 'danger',
-        type: 'warning',
-        tip: msg,
-        autofocus: false,
-        showClose: false
-      }
-    ).then(() => {
+    const msg = data.leaf ? '' : t('visualization.delete_tips')
+    const tips_label = data.leaf ? resourceLabel : t('visualization.folder')
+    ElMessageBox.confirm(t('visualization.delete_warn', [tips_label]), {
+      confirmButtonType: 'danger',
+      type: 'warning',
+      tip: msg,
+      autofocus: false,
+      showClose: false
+    }).then(() => {
       deleteLogic(data.id, curCanvasType.value).then(() => {
-        ElMessage.success('删除成功')
+        ElMessage.success(t('visualization.delete_success'))
         getTree()
       })
     })
@@ -330,7 +361,7 @@ const operation = (cmd: string, data: BusiTreeNode, nodeType: string) => {
           )
           return
         }
-        const newWindow = window.open(baseUrl, '_blank')
+        const newWindow = window.open(baseUrl, openType)
         initOpenHandler(newWindow)
       })
       .finally(() => {
@@ -365,9 +396,9 @@ const addOperation = (
       return
     }
     if (data?.id) {
-      newWindow = window.open(baseUrl + `&pid=${data.id}`, '_blank')
+      newWindow = window.open(baseUrl + `&pid=${data.id}`, openType)
     } else {
-      newWindow = window.open(baseUrl, '_blank')
+      newWindow = window.open(baseUrl, openType)
     }
     initOpenHandler(newWindow)
   } else if (cmd === 'newFromTemplate') {
@@ -402,7 +433,7 @@ const resourceEdit = resourceId => {
     return
   }
 
-  const newWindow = window.open(baseUrl + resourceId, '_blank')
+  const newWindow = window.open(baseUrl + resourceId, openType)
   initOpenHandler(newWindow)
 }
 
@@ -433,9 +464,9 @@ const resourceCreateFinish = templateData => {
   }
 
   if (state.templateCreatePid) {
-    newWindow = window.open(baseUrl + `&pid=${state.templateCreatePid}`, '_blank')
+    newWindow = window.open(baseUrl + `&pid=${state.templateCreatePid}`, openType)
   } else {
-    newWindow = window.open(baseUrl, '_blank')
+    newWindow = window.open(baseUrl, openType)
   }
   initOpenHandler(newWindow)
 }
@@ -467,20 +498,20 @@ const getDefaultExpandedKeys = () => {
 
 const sortList = [
   {
-    name: '按创建时间升序',
+    name: t('visualization.time_asc'),
     value: 'time_asc'
   },
   {
-    name: '按创建时间降序',
+    name: t('visualization.time_desc'),
     value: 'time_desc',
     divided: true
   },
   {
-    name: '按照名称升序',
+    name: t('visualization.name_asc'),
     value: 'name_asc'
   },
   {
-    name: '按照名称降序',
+    name: t('visualization.name_desc'),
     value: 'name_desc'
   }
 ]
@@ -546,7 +577,7 @@ defineExpose({
       <div class="icon-methods" v-show="showPosition === 'preview'">
         <span class="title"> {{ resourceLabel }} </span>
         <div v-if="rootManage" class="flex-align-center">
-          <el-tooltip content="新建文件夹" placement="top" effect="dark">
+          <el-tooltip :content="t('work_branch.new_folder')" placement="top" effect="dark">
             <el-icon
               class="custom-icon btn"
               style="margin-right: 20px"
@@ -569,7 +600,7 @@ defineExpose({
                     <el-icon :class="`handle-icon color-${curCanvasType}`">
                       <Icon><component class="svg-icon" :is="dvSvgType"></component></Icon>
                     </el-icon>
-                    空白新建
+                    {{ t('work_branch.new_empty') }}
                   </el-dropdown-item>
                   <el-dropdown-item @click="addOperation('newFromTemplate', null, 'leaf', true)">
                     <el-icon class="handle-icon">
@@ -640,6 +671,10 @@ defineExpose({
         @node-expand="nodeExpand"
         @node-collapse="nodeCollapse"
         @node-click="nodeClick"
+        @node-drag-start="handleDragStart"
+        :allow-drop="allowDrop"
+        @node-drop="handleDrop"
+        draggable
       >
         <template #default="{ node, data }">
           <span class="custom-tree-node">
@@ -686,7 +721,7 @@ defineExpose({
                 :node="data"
                 :any-manage="anyManage"
                 :resource-type="curCanvasType"
-                :menu-list="data.leaf ? menuList : state.folderMenuList"
+                :menu-list="data.leaf ? menuListWeight(data.id) : state.folderMenuList"
               ></dv-handle-more>
             </div>
           </span>

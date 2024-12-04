@@ -22,6 +22,7 @@ interface SelectConfig {
   defaultValue: any
   defaultValueCheck: boolean
   id: string
+  queryConditionWidth: number
   displayType: string
   timeGranularity: DatePickType
   timeGranularityMultiple: DatePickType
@@ -38,6 +39,7 @@ const props = defineProps({
       return {
         selectValue: '',
         defaultValue: '',
+        queryConditionWidth: 0,
         defaultValueCheck: false,
         displayType: '1',
         timeGranularity: 'date',
@@ -167,13 +169,21 @@ const init = () => {
 }
 
 const queryConditionWidth = inject('com-width', Function, true)
+const getCustomWidth = () => {
+  if (placeholder?.value?.placeholderShow) {
+    if (props.config.queryConditionWidth === undefined) {
+      return queryConditionWidth()
+    }
+    return props.config.queryConditionWidth
+  }
+  return 227
+}
 const isConfirmSearch = inject('is-confirm-search', Function, true)
 const selectStyle = computed(() => {
   return props.isConfig
     ? {}
     : {
-        width:
-          (multiple.value ? queryConditionWidth() * 2 : queryConditionWidth()) + 'px !important'
+        width: (multiple.value ? getCustomWidth() * 2 : getCustomWidth()) + 'px !important'
       }
 })
 
@@ -258,7 +268,13 @@ const disabledDate = val => {
         .startOf(queryTimeType.value)
         .valueOf() -
         1000 <
-      timeStamp
+        timeStamp ||
+      dayjs(startWindowTime.value)
+        .subtract(maximumSingleQuery, queryTimeType.value)
+        .startOf(queryTimeType.value)
+        .valueOf() +
+        1000 >
+        timeStamp
   }
   if (intervalType === 'none') {
     if (dynamicWindow) return isDynamicWindowTime
@@ -433,6 +449,8 @@ const formatDate = computed(() => {
     v-else
     :key="config.timeGranularity + 1"
     v-model="selectValue"
+    @visible-change="visibleChange"
+    :disabled-date="disabledDate"
     :type="config.timeGranularity"
     @change="handleValueChange"
     :style="selectStyle"

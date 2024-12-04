@@ -14,7 +14,8 @@ import { useEmbedded } from '@/store/modules/embedded'
 import { useLinkStoreWithOut } from '@/store/modules/link'
 import { config } from './config'
 import { configHandler } from './refresh'
-
+import { isMobile, getLocale } from '@/utils/utils'
+import { useRequestStoreWithOut } from '@/store/modules/request'
 type AxiosErrorWidthLoading<T> = T & {
   config: {
     loading?: boolean
@@ -30,8 +31,11 @@ import router from '@/router'
 
 const { result_code } = config
 import { useCache } from '@/hooks/web/useCache'
+import { useI18n } from '@/hooks/web/useI18n'
+const { t } = useI18n()
 
 const { wsCache } = useCache()
+const requestStore = useRequestStoreWithOut()
 const embeddedStore = useEmbedded()
 const basePath = import.meta.env.VITE_API_BASEPATH
 
@@ -82,8 +86,8 @@ const service: AxiosInstanceWithLoading = axios.create({
 })
 const mapping = {
   'zh-CN': 'zh-CN',
-  en: 'en_US',
-  tw: 'zh_TW'
+  en: 'en-US',
+  tw: 'zh-TW'
 }
 const permissionStore = usePermissionStoreWithOut()
 const linkStore = useLinkStoreWithOut()
@@ -108,19 +112,19 @@ service.interceptors.request.use(
       config.baseURL = PATH_URL
     }
 
+    if (isMobile()) {
+      ;(config.headers as AxiosRequestHeaders)['X-DE-MOBILE'] = true
+    }
     if (linkStore.getLinkToken) {
       ;(config.headers as AxiosRequestHeaders)['X-DE-LINK-TOKEN'] = linkStore.getLinkToken
     } else if (embeddedStore.token) {
       ;(config.headers as AxiosRequestHeaders)['X-EMBEDDED-TOKEN'] = embeddedStore.token
     }
-    if (wsCache.get('user.language')) {
-      const key = wsCache.get('user.language')
-      const val = mapping[key] || key
+    const locale = getLocale()
+    if (locale) {
+      const val = mapping[locale] || locale
       ;(config.headers as AxiosRequestHeaders)['Accept-Language'] = val
     }
-    ;(config.headers as AxiosRequestHeaders)['out_auth_platform'] = wsCache.get('out_auth_platform')
-      ? wsCache.get('out_auth_platform')
-      : 'default'
 
     if (config.method === 'get' && config.params) {
       let url = config.url as string
@@ -202,6 +206,15 @@ service.interceptors.response.use(
     }
   },
   (error: AxiosErrorWidthLoading<AxiosError>) => {
+    if (error.message?.includes('timeout of')) {
+      requestStore.resetLoadingMap()
+      ElMessage({
+        type: 'error',
+        message: '请求超时，请稍后再试',
+        showClose: true
+      })
+    }
+
     if (!error?.response) {
       return Promise.reject(error)
     }

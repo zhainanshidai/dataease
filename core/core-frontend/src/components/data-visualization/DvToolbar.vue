@@ -13,7 +13,7 @@ import icon_undo_outlined from '@/assets/svg/icon_undo_outlined.svg'
 import icon_redo_outlined from '@/assets/svg/icon_redo_outlined.svg'
 import { ElMessage, ElMessageBox } from 'element-plus-secondary'
 import eventBus from '@/utils/eventBus'
-import { ref, nextTick, computed, toRefs } from 'vue'
+import { ref, nextTick, computed, toRefs, onBeforeUnmount, onMounted } from 'vue'
 import { useEmbedded } from '@/store/modules/embedded'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
@@ -26,7 +26,7 @@ import MediaGroup from '@/custom-component/component-group/MediaGroup.vue'
 import TextGroup from '@/custom-component/component-group/TextGroup.vue'
 import CommonGroup from '@/custom-component/component-group/CommonGroup.vue'
 import DeResourceGroupOpt from '@/views/common/DeResourceGroupOpt.vue'
-import { canvasSave, initCanvasData } from '@/utils/canvasUtils'
+import { canvasSave, checkCanvasChangePre, initCanvasData } from '@/utils/canvasUtils'
 import { changeSizeWithScale } from '@/utils/changeComponentsSizeWithScale'
 import MoreComGroup from '@/custom-component/component-group/MoreComGroup.vue'
 import { XpackComponent } from '@/components/plugin'
@@ -41,6 +41,7 @@ import DeAppApply from '@/views/common/DeAppApply.vue'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import { useUserStoreWithOut } from '@/store/modules/user'
 import TabsGroup from '@/custom-component/component-group/TabsGroup.vue'
+import { useI18n } from '@/hooks/web/useI18n'
 let nameEdit = ref(false)
 let inputName = ref('')
 let nameInput = ref(null)
@@ -58,6 +59,7 @@ const dvModel = 'dataV'
 const outerParamsSetRef = ref(null)
 const fullScreeRef = ref(null)
 const userStore = useUserStoreWithOut()
+const { t } = useI18n()
 
 const props = defineProps({
   createType: {
@@ -143,14 +145,18 @@ const saveCanvasWithCheck = () => {
         },
         appData: appData.value
       }
-      resourceAppOpt.value.init(params)
+      nextTick(() => {
+        resourceAppOpt.value.init(params)
+      })
     } else {
-      const params = { name: dvInfo.value.name, leaf: true, id: dvInfo.value.pid }
+      const params = { name: dvInfo.value.name, leaf: true, id: dvInfo.value.pid || '0' }
       resourceGroupOpt.value.optInit('leaf', params, 'newLeaf', true)
     }
     return
   }
-  saveResource()
+  checkCanvasChangePre(() => {
+    saveResource()
+  })
 }
 
 const saveResource = () => {
@@ -160,10 +166,18 @@ const saveResource = () => {
       canvasSave(() => {
         snapshotStore.resetStyleChangeTimes()
         wsCache.delete('DE-DV-CATCH-' + dvInfo.value.id)
-        ElMessage.success('保存成功')
+        ElMessage.success(t('commons.save_success'))
         let url = window.location.href
         url = url.replace(/\?opt=create/, `?dvId=${dvInfo.value.id}`)
-        window.history.replaceState(null, '', url)
+        if (!embeddedStore.baseUrl) {
+          window.history.replaceState(
+            {
+              path: url
+            },
+            '',
+            url
+          )
+        }
         if (appData.value) {
           initCanvasData(dvInfo.value.id, 'dataV', () => {
             useEmitt().emitter.emit('refresh-dataset-selector')
@@ -198,7 +212,7 @@ const backToMain = () => {
     url = url + '?dvId=' + dvInfo.value.id
   }
   if (styleChangeTimes.value > 0) {
-    ElMessageBox.confirm('当前的更改尚未保存，确定退出吗？', {
+    ElMessageBox.confirm(t('visualization.change_save_tips'), {
       confirmButtonType: 'primary',
       type: 'warning',
       autofocus: false,
@@ -232,7 +246,12 @@ const backHandler = (url: string) => {
   }
   dvMainStore.canvasStateChange({ key: 'curPointArea', value: 'base' })
   wsCache.delete('DE-DV-CATCH-' + dvInfo.value.id)
-  window.open(url, '_self')
+  wsCache.set('dv-info-id', dvInfo.value.id)
+  if (!!history.state.back) {
+    history.back()
+  } else {
+    window.open(url, '_self')
+  }
 }
 const openHandler = ref(null)
 
@@ -248,17 +267,26 @@ const appStore = useAppStoreWithOut()
 const isDataEaseBi = computed(() => appStore.getIsDataEaseBi)
 const multiplexingRef = ref(null)
 
-eventBus.on('preview', preview)
-eventBus.on('save', saveCanvasWithCheck)
-eventBus.on('clearCanvas', clearCanvas)
+onMounted(() => {
+  eventBus.on('preview', preview)
+  eventBus.on('save', saveCanvasWithCheck)
+  eventBus.on('clearCanvas', clearCanvas)
+})
+
+onBeforeUnmount(() => {
+  eventBus.off('preview', preview)
+  eventBus.off('save', saveCanvasWithCheck)
+  eventBus.off('clearCanvas', clearCanvas)
+  dvMainStore.setAppDataInfo(null)
+})
 
 const openOuterParamsSet = () => {
   if (componentData.value.length === 0) {
-    ElMessage.warning('当前仪表板为空，请先添加组件')
+    ElMessage.warning(t('components.add_components_first'))
     return
   }
   if (!dvInfo.value.id) {
-    ElMessage.warning('请先保存当前页面')
+    ElMessage.warning(t('components.current_page_first'))
     return
   }
   //设置需要先触发保存
@@ -271,6 +299,7 @@ const multiplexingCanvasOpen = () => {
   multiplexingRef.value.dialogInit('dataV')
 }
 
+const isIframe = computed(() => appStore.getIsIframe)
 const fullScreenPreview = () => {
   dvMainStore.canvasStateChange({ key: 'curPointArea', value: 'base' })
   fullScreeRef.value.toggleFullscreen()
@@ -327,7 +356,7 @@ const fullScreenPreview = () => {
             is-label
             :base-width="410"
             :icon-name="dvView"
-            title="图表"
+            :title="t('visualization.view')"
           >
             <user-view-group></user-view-group>
           </component-group>
@@ -336,11 +365,16 @@ const fullScreenPreview = () => {
             :show-split-line="true"
             is-label
             :icon-name="dvFilter"
-            title="查询组件"
+            :title="t('visualization.query_component')"
           >
             <query-group :dv-model="dvModel"></query-group>
           </component-group>
-          <component-group is-label :base-width="215" :icon-name="dvText" title="文本">
+          <component-group
+            is-label
+            :base-width="215"
+            :icon-name="dvText"
+            :title="t('visualization.text_html')"
+          >
             <text-group></text-group>
           </component-group>
           <component-group
@@ -348,14 +382,19 @@ const fullScreenPreview = () => {
             placement="bottom"
             :base-width="328"
             :icon-name="dvMedia"
-            title="媒体"
+            :title="t('visualization.media')"
           >
             <media-group></media-group>
           </component-group>
           <component-group is-label :base-width="115" :icon-name="dvTab" title="Tab">
             <tabs-group :dv-model="dvModel"></tabs-group>
           </component-group>
-          <component-group is-label :base-width="215" :icon-name="dvMoreCom" title="更多">
+          <component-group
+            is-label
+            :base-width="215"
+            :icon-name="dvMoreCom"
+            :title="t('visualization.more')"
+          >
             <more-com-group></more-com-group>
           </component-group>
           <component-group
@@ -363,23 +402,27 @@ const fullScreenPreview = () => {
             :base-width="410"
             :icon-name="dvMaterial"
             :show-split-line="true"
-            title="素材"
+            :title="t('visualization.source_material')"
           >
             <common-group></common-group>
           </component-group>
           <component-button-label
             :icon-name="icon_copy_filled"
-            title="复用"
+            :title="t('visualization.multiplexing')"
             is-label
             @customClick="multiplexingCanvasOpen"
           ></component-button-label>
         </div>
       </template>
       <div class="right-area">
-        <el-tooltip effect="dark" content="外部参数设置" placement="bottom">
+        <el-tooltip
+          effect="dark"
+          :content="t('visualization.external_parameter_settings')"
+          placement="bottom"
+        >
           <component-button
             v-show="editMode === 'edit'"
-            tips="外部参数设置"
+            :tips="t('visualization.external_parameter_settings')"
             @custom-click="openOuterParamsSet"
             :icon-name="icon_params_setting"
           />
@@ -392,10 +435,15 @@ const fullScreenPreview = () => {
           class="preview-button"
           type="primary"
         >
-          编辑
+          {{ t('visualization.edit') }}
         </el-button>
-        <el-button v-else class="preview-button" @click="fullScreenPreview" style="float: right">
-          预览
+        <el-button
+          v-else-if="!isIframe"
+          class="preview-button"
+          @click="fullScreenPreview"
+          style="float: right"
+        >
+          {{ t('visualization.preview') }}
         </el-button>
         <el-button
           @click="saveCanvasWithCheck()"
@@ -403,7 +451,7 @@ const fullScreenPreview = () => {
           style="float: right; margin-right: 12px"
           type="primary"
         >
-          保存
+          {{ t('visualization.save') }}
         </el-button>
       </div>
     </div>

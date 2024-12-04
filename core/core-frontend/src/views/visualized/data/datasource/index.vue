@@ -34,6 +34,7 @@ import {
   ElScrollbar,
   ElAside
 } from 'element-plus-secondary'
+import { treeDraggble } from '@/utils/treeDraggble'
 import GridTable from '@/components/grid-table/src/GridTable.vue'
 import ArrowSide from '@/views/common/DeResourceArrow.vue'
 import relationChart from '@/components/relation-chart/index.vue'
@@ -41,7 +42,13 @@ import { HandleMore } from '@/components/handle-more'
 import { Icon } from '@/components/icon-custom'
 import { fieldType } from '@/utils/attr'
 import { useEmitt } from '@/hooks/web/useEmitt'
-import { getHidePwById, listSyncRecord, uploadFile, perDeleteDatasource } from '@/api/datasource'
+import {
+  getHidePwById,
+  listSyncRecord,
+  uploadFile,
+  perDeleteDatasource,
+  getSimpleDs
+} from '@/api/datasource'
 import CreatDsGroup from './form/CreatDsGroup.vue'
 import type { Tree } from '../dataset/form/CreatDsGroup.vue'
 import { previewData, getById } from '@/api/datasource'
@@ -80,6 +87,8 @@ import { useEmbedded } from '@/store/modules/embedded'
 import { XpackComponent } from '@/components/plugin'
 import { iconFieldMap } from '@/components/icon-group/field-list'
 import { iconDatasourceMap } from '@/components/icon-group/datasource-list'
+import { querySymmetricKey } from '@/api/login'
+import { symmetricDecrypt } from '@/utils/encryption'
 const route = useRoute()
 const interactiveStore = interactiveStoreWithOut()
 interface Field {
@@ -123,6 +132,7 @@ const createDataset = (tableName?: string) => {
     useEmitt().emitter.emit('changeCurrentComponent', 'DatasetEditor')
     return
   }
+  wsCache.set('ds-info-id', nodeInfo.id)
   router.push({
     path: '/dataset-form',
     query: {
@@ -201,10 +211,10 @@ const selectDataset = row => {
     })
 }
 
-let originResourceTree = []
+const originResourceTree = shallowRef([])
 
 const sortTypeChange = sortType => {
-  state.datasourceTree = treeSort(originResourceTree, sortType)
+  state.datasourceTree = treeSort(originResourceTree.value, sortType)
   state.curSortType = sortType
   wsCache.set('TreeSort-datasource', state.curSortType)
 }
@@ -457,10 +467,13 @@ const saveDsFolder = (params, successCb, finallyCb, cmd) => {
 
 const dsLoading = ref(false)
 const mounted = ref(false)
+const symmetricKey = ref('')
 
 const listDs = () => {
   rawDatasourceList.value = []
   dsLoading.value = true
+  let curSortType = sortList[Number(wsCache.get('TreeSort-backend')) ?? 1].value
+  curSortType = wsCache.get('TreeSort-dataset') ?? curSortType
   const request = { busiFlag: 'datasource' } as BusiTreeRequest
   interactiveStore
     .setInteractive(request)
@@ -469,13 +482,13 @@ const listDs = () => {
       if (nodeData.length && nodeData[0]['id'] === '0' && nodeData[0]['name'] === 'root') {
         rootManage.value = nodeData[0]['weight'] >= 7
         state.datasourceTree = nodeData[0]['children'] || []
-        originResourceTree = cloneDeep(unref(state.datasourceTree))
-        sortTypeChange(state.curSortType)
+        originResourceTree.value = cloneDeep(unref(state.datasourceTree))
+        sortTypeChange(curSortType)
         return
       }
-      originResourceTree = cloneDeep(unref(state.datasourceTree))
+      originResourceTree.value = cloneDeep(unref(state.datasourceTree))
       state.datasourceTree = nodeData
-      sortTypeChange(state.curSortType)
+      sortTypeChange(curSortType)
     })
     .finally(() => {
       mounted.value = true
@@ -549,7 +562,11 @@ const handleNodeClick = data => {
     dsListTree.value.setCurrentKey(null)
     return
   }
-  return getHidePwById(data.id).then(res => {
+  let method = getHidePwById
+  if (data.weight < 7) {
+    method = getSimpleDs
+  }
+  return method(data.id).then(res => {
     let {
       name,
       createBy,
@@ -569,13 +586,13 @@ const handleNodeClick = data => {
       enableDataFill
     } = res.data
     if (configuration) {
-      configuration = JSON.parse(Base64.decode(configuration))
-    }
-    if (apiConfigurationStr) {
-      apiConfigurationStr = JSON.parse(Base64.decode(apiConfigurationStr))
+      configuration = JSON.parse(symmetricDecrypt(configuration, symmetricKey.value))
     }
     if (paramsStr) {
-      paramsStr = JSON.parse(Base64.decode(paramsStr))
+      paramsStr = JSON.parse(symmetricDecrypt(paramsStr, symmetricKey.value))
+    }
+    if (apiConfigurationStr) {
+      apiConfigurationStr = JSON.parse(symmetricDecrypt(apiConfigurationStr, symmetricKey.value))
     }
     Object.assign(nodeInfo, {
       name,
@@ -696,13 +713,13 @@ const editDatasource = (editType?: number) => {
       enableDataFill
     } = res.data
     if (configuration) {
-      configuration = JSON.parse(Base64.decode(configuration))
+      configuration = JSON.parse(symmetricDecrypt(configuration, symmetricKey.value))
     }
     if (paramsStr) {
-      paramsStr = JSON.parse(Base64.decode(paramsStr))
+      paramsStr = JSON.parse(symmetricDecrypt(paramsStr, symmetricKey.value))
     }
     if (apiConfigurationStr) {
-      apiConfigurationStr = JSON.parse(Base64.decode(apiConfigurationStr))
+      apiConfigurationStr = JSON.parse(symmetricDecrypt(apiConfigurationStr, symmetricKey.value))
     }
     let datasource = reactive<Node>(cloneDeep(defaultInfo))
     Object.assign(datasource, {
@@ -734,6 +751,14 @@ const handleEdit = async data => {
   editDatasource()
 }
 
+const { handleDrop, allowDrop, handleDragStart } = treeDraggble(
+  state,
+  'datasourceTree',
+  move,
+  'datasource',
+  originResourceTree
+)
+
 const handleCopy = async data => {
   getById(data.id).then(res => {
     let {
@@ -754,13 +779,13 @@ const handleCopy = async data => {
       lastSyncTime
     } = res.data
     if (configuration) {
-      configuration = JSON.parse(Base64.decode(configuration))
+      configuration = JSON.parse(symmetricDecrypt(configuration, symmetricKey.value))
     }
     if (paramsStr) {
-      paramsStr = JSON.parse(Base64.decode(paramsStr))
+      paramsStr = JSON.parse(symmetricDecrypt(paramsStr, symmetricKey.value))
     }
     if (apiConfigurationStr) {
-      apiConfigurationStr = JSON.parse(Base64.decode(apiConfigurationStr))
+      apiConfigurationStr = JSON.parse(symmetricDecrypt(apiConfigurationStr, symmetricKey.value))
     }
     let datasource = reactive<Node>(cloneDeep(defaultInfo))
     Object.assign(datasource, {
@@ -781,6 +806,7 @@ const handleCopy = async data => {
       lastSyncTime
     })
     datasource.id = ''
+    datasource.copy = true
     datasource.name = t('datasource.copy')
     if (datasource.type === 'API') {
       for (let i = 0; i < datasource.apiConfiguration.length; i++) {
@@ -893,25 +919,30 @@ const operation = (cmd: string, data: Tree, nodeType: string) => {
 const handleClick = (tabName: TabPaneName) => {
   switch (tabName) {
     case 'config':
-      listDatasourceTables({ datasourceId: nodeInfo.id }).then(res => {
-        tabList.value = res.data.map(ele => {
-          const { name, tableName } = ele
-          return {
-            value: name,
-            label: tableName
-          }
-        })
-        if (!!tabList.value.length && !activeTab.value) {
-          activeTab.value = tabList.value[0].value
-          if (nodeInfo.type === 'Excel') {
+      tableData.value = []
+      if (nodeInfo.type === 'Excel') {
+        listDatasourceTables({ datasourceId: nodeInfo.id }).then(res => {
+          tabList.value = res.data.map(ele => {
+            const { name, tableName } = ele
+            return {
+              value: name,
+              label: tableName
+            }
+          })
+          if (!!tabList.value.length && !activeTab.value) {
+            activeTab.value = tabList.value[0].value
             handleTabClick(activeTab)
           }
-        }
-        tableData.value = res.data
-      })
+          tableData.value = res.data
+        })
+      }
       break
     case 'table':
-      initSearch()
+      tableData.value = []
+      listDatasourceTables({ datasourceId: nodeInfo.id }).then(res => {
+        tableData.value = res.data
+        initSearch()
+      })
       break
     default:
       break
@@ -964,13 +995,18 @@ const loadInit = () => {
 }
 
 onMounted(() => {
-  nodeInfo.id = (route.params.id as string) || (route.query.id as string) || ''
+  const dsId = wsCache.get('ds-info-id') || route.params.id
+  nodeInfo.id = (dsId as string) || (route.query.id as string) || ''
+  wsCache.delete('ds-info-id')
   loadInit()
   listDs()
   const { opt } = router.currentRoute.value.query
   if (opt && opt === 'create') {
     datasourceEditor.value.init(null, null)
   }
+  querySymmetricKey().then(res => {
+    symmetricKey.value = res.data
+  })
 })
 
 const sideTreeStatus = ref(true)
@@ -1060,16 +1096,13 @@ const getMenuList = (val: boolean) => {
           <el-dropdown @command="sortTypeChange" trigger="click">
             <el-icon class="filter-icon-span">
               <el-tooltip :offset="16" effect="dark" :content="sortTypeTip" placement="top">
-                <Icon v-if="state.curSortType.includes('asc')" name="dv-sort-asc" class="opt-icon"
-                  ><dvSortAsc class="svg-icon opt-icon"
+                <Icon name="dv-sort-asc" class="opt-icon"
+                  ><dvSortAsc v-if="state.curSortType.includes('asc')" class="svg-icon opt-icon"
                 /></Icon>
               </el-tooltip>
               <el-tooltip :offset="16" effect="dark" :content="sortTypeTip" placement="top">
-                <Icon
-                  v-show="state.curSortType.includes('desc')"
-                  name="dv-sort-desc"
-                  class="opt-icon"
-                  ><dvSortDesc class="svg-icon opt-icon"
+                <Icon name="dv-sort-desc" class="opt-icon"
+                  ><dvSortDesc v-if="state.curSortType.includes('desc')" class="svg-icon opt-icon"
                 /></Icon>
               </el-tooltip>
             </el-icon>
@@ -1101,6 +1134,10 @@ const getMenuList = (val: boolean) => {
             :default-expanded-keys="expandedKey"
             :data="state.datasourceTree"
             :props="defaultProps"
+            @node-drag-start="handleDragStart"
+            :allow-drop="allowDrop"
+            @node-drop="handleDrop"
+            draggable
             @node-click="handleNodeClick"
           >
             <template #default="{ node, data }">
@@ -1421,7 +1458,9 @@ const getMenuList = (val: boolean) => {
                   }}</BaseInfoItem>
                 </el-col>
               </el-row>
-              <template v-if="!['Excel', 'API', 'es'].includes(nodeInfo.type)">
+              <template
+                v-if="!['Excel', 'API', 'es'].includes(nodeInfo.type) && nodeInfo.weight >= 7"
+              >
                 <el-row :gutter="24" v-show="nodeInfo.configuration.urlType !== 'jdbcUrl'">
                   <el-col :span="12">
                     <BaseInfoItem :label="t('datasource.host')">{{
@@ -1551,8 +1590,14 @@ const getMenuList = (val: boolean) => {
                     </el-col>
                   </el-row>
                 </template>
+
+                <!--    数据填报      -->
+                <XpackComponent
+                  :nodeInfo="nodeInfo"
+                  jsname="L2NvbXBvbmVudC9kYXRhLWZpbGxpbmcvRGF0YXNvdXJjZURhdGFGaWxsaW5nSW5mbw=="
+                />
               </template>
-              <template v-if="['es'].includes(nodeInfo.type)">
+              <template v-if="['es'].includes(nodeInfo.type) && nodeInfo.weight >= 7">
                 <el-row :gutter="24">
                   <el-col :span="12">
                     <BaseInfoItem :label="t('datasource.datasource_url')">{{
@@ -1564,7 +1609,7 @@ const getMenuList = (val: boolean) => {
             </template>
           </BaseInfoContent>
           <BaseInfoContent
-            v-if="nodeInfo.type === 'API'"
+            v-if="nodeInfo.type === 'API' && nodeInfo.weight >= 7"
             v-slot="slotProps"
             :name="t('datasource.data_table')"
           >
@@ -1621,7 +1666,7 @@ const getMenuList = (val: boolean) => {
             </el-button>
           </BaseInfoContent>
           <BaseInfoContent
-            v-if="nodeInfo.type === 'API'"
+            v-if="nodeInfo.type === 'API' && nodeInfo.weight >= 7"
             v-slot="slotProps"
             :name="t('dataset.update_setting')"
             :time="(nodeInfo.lastSyncTime as string)"
@@ -2182,7 +2227,7 @@ const getMenuList = (val: boolean) => {
       padding: 24px;
       margin: 24px;
       background: #fff;
-      height: calc(100vh - 190px);
+      height: calc(100vh - 200px);
 
       .search-operate {
         width: 280px;

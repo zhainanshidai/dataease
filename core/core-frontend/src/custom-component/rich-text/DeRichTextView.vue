@@ -62,7 +62,7 @@ import { useEmitt } from '@/hooks/web/useEmitt'
 import { valueFormatter } from '@/views/chart/components/js/formatter'
 import { parseJson } from '@/views/chart/components/js/util'
 import { mappingColor } from '@/views/chart/components/js/panel/common/common_table'
-import { CHART_FONT_FAMILY } from '@/views/chart/components/editor/util/chart'
+import { CHART_FONT_FAMILY_ORIGIN } from '@/views/chart/components/editor/util/chart'
 import { useAppearanceStoreWithOut } from '@/store/modules/appearance'
 const snapshotStore = snapshotStoreWithOut()
 const errMsg = ref('')
@@ -137,13 +137,13 @@ const myValue = ref('')
 const systemFontFamily = appearanceStore.fontList.map(item => item.name)
 const curFontFamily = () => {
   let result = ''
-  CHART_FONT_FAMILY.concat(
+  CHART_FONT_FAMILY_ORIGIN.concat(
     appearanceStore.fontList.map(ele => ({
       name: ele.name,
       value: ele.name
     }))
   ).forEach(font => {
-    result = result + font.name + '=' + font.name + ';'
+    result = result + font.name + '=' + font.value + ';'
   })
   return result
 }
@@ -164,7 +164,8 @@ const init = ref({
     ' blockquote subscript superscript removeformat | table image ',
   toolbar_location: '/',
   font_formats: curFontFamily(),
-  fontsize_formats: '12px 14px 16px 18px 20px 22px 24px 28px 32px 36px 42px 48px 56px 72px', // 字体大小
+  fontsize_formats:
+    '12px 14px 16px 18px 20px 22px 24px 28px 32px 36px 42px 48px 56px 72px 80px 90px 100px 110px 120px 140px 150px 170px 190px 210px', // 字体大小
   menubar: false,
   placeholder: '',
   outer_placeholder: '双击输入文字',
@@ -224,7 +225,7 @@ const init = ref({
           // 显示原始手柄并移除克隆手柄
           originalHandle.style.display = ''
           if (cloneHandle) {
-            cloneHandle.parentNode.removeChild(cloneHandle) // 获取原手柄的父元素
+            cloneHandle.parentNode?.removeChild(cloneHandle) // 获取原手柄的父元素
           }
           cloneHandle = null
           originalHandle = null
@@ -538,6 +539,8 @@ const calcData = (view: Chart, callback) => {
   updateEmptyValue(view)
   if (view.tableId || view['dataFrom'] === 'template') {
     const v = JSON.parse(JSON.stringify(view))
+    v.resultCount = 1
+    v.resultMode = 'custom'
     getData(v)
       .then(res => {
         if (res.code && res.code !== 0) {

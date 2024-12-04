@@ -52,6 +52,8 @@ const contentInnerClass = computed(() => {
     return 'preview-content-inner-height-first'
   } else if (props.canvasStylePreview.screenAdaptor === 'full') {
     return 'preview-content-inner-full'
+  } else if (props.canvasStylePreview.screenAdaptor === 'keep') {
+    return 'preview-content-inner-size-keep'
   } else {
     return 'preview-content-inner-width-first'
   }

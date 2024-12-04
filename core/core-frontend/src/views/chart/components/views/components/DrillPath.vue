@@ -67,10 +67,15 @@ const loadThemeStyle = () => {
     }
   }
 }
+const drillPathVar = computed(() => [{ '--drill-color': textColor.value }])
 </script>
 
 <template>
-  <div v-if="props.drillFilters && props.drillFilters.length > 0" class="drill">
+  <div
+    v-if="props.drillFilters && props.drillFilters.length > 0"
+    class="drill"
+    :style="drillPathVar"
+  >
     <el-breadcrumb :separator-icon="ArrowRight" class="drill-style">
       <el-breadcrumb-item class="drill-item" @click="drillJump(0)">
         <span :style="{ color: textColor }">{{ t('commons.all') }}</span>
@@ -110,5 +115,8 @@ const loadThemeStyle = () => {
   z-index: 1;
   height: 20px;
   padding: 0 16px;
+  ::v-deep(.ed-icon) {
+    color: var(--drill-color) !important;
+  }
 }
 </style>

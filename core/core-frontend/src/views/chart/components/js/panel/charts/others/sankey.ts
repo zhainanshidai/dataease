@@ -246,7 +246,8 @@ export class SankeyBar extends G2PlotChartView<SankeyOptions, Sankey> {
             style: {
               fill: labelAttr.color,
               fontSize: labelAttr.fontSize,
-              textAlign: isLast ? 'end' : 'start'
+              textAlign: isLast ? 'end' : 'start',
+              fontFamily: chart.fontFamily
             },
             offsetX: isLast ? -8 : 8
           }

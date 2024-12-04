@@ -48,6 +48,17 @@ export const snapshotStore = defineStore('snapshot', {
     }
   },
   actions: {
+    initSnapShot() {
+      this.styleChangeTimes = -1
+      this.cacheStyleChangeTimes = 0
+      this.snapshotCacheTimes = 0
+      this.cacheViewIdInfo = {
+        snapshotCacheViewCalc: [],
+        snapshotCacheViewRender: []
+      }
+      this.snapshotData = []
+      this.snapshotIndex = -1
+    },
     //定时检查变动次数 存在变动次数则进行镜像处理
     snapshotCatchToStore() {
       if (this.snapshotCacheTimes) {

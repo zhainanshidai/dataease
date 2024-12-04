@@ -14,7 +14,12 @@ const { curComponent } = storeToRefs(dvMainStore)
 </script>
 
 <template>
-  <el-collapse-item :effect="themes" title="位置" name="position" v-if="!dashboardActive">
+  <el-collapse-item
+    :effect="themes"
+    :title="t('visualization.position')"
+    name="position"
+    v-if="!dashboardActive"
+  >
     <component-position :themes="themes" />
   </el-collapse-item>
 </template>

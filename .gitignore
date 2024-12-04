@@ -51,3 +51,4 @@ core/core-frontend/src/assets/fsSvg.html
 /extensions/
 .vite/
 /core/backend/
+/classpath:substitule.json

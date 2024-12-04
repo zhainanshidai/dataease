@@ -83,9 +83,8 @@ onMounted(() => {
 
 <style lang="less">
 .toolbox-top-popover {
-  height: 82px;
   min-width: 208px !important;
-  padding: 16px !important;
+  padding: 8px !important;
   display: flex;
   .doc-card {
     margin: auto;

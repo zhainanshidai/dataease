@@ -1,6 +1,7 @@
 import { G2PlotChartView, G2PlotDrawOptions } from '../../types/impl/g2plot'
 import { flow, hexColorToRGBA, parseJson } from '../../../util'
 import {
+  configAxisLabelLengthLimit,
   configPlotTooltipEvent,
   getTooltipContainer,
   setGradientColor,
@@ -54,9 +55,17 @@ export class ProgressBar extends G2PlotChartView<BarOptions, G2Progress> {
     'background-overall-component': ['all'],
     'border-style': ['all'],
     'basic-style-selector': ['colors', 'alpha', 'gradient', 'radiusColumnBar'],
-    'label-selector': ['hPosition', 'color', 'fontSize'],
+    'label-selector': ['hPosition', 'color', 'fontSize', 'showQuota', 'showProportion'],
     'tooltip-selector': ['fontSize', 'color', 'backgroundColor', 'tooltipFormatter', 'show'],
-    'y-axis-selector': ['name', 'color', 'fontSize', 'axisForm', 'axisLabel', 'position'],
+    'y-axis-selector': [
+      'name',
+      'color',
+      'fontSize',
+      'axisForm',
+      'axisLabel',
+      'position',
+      'showLengthLimit'
+    ],
     'function-cfg': ['emptyDataStrategy']
   }
   axis: AxisType[] = [...BAR_AXIS_TYPE, 'yAxisExt']
@@ -140,6 +149,7 @@ export class ProgressBar extends G2PlotChartView<BarOptions, G2Progress> {
 
     newChart.on('interval:click', action)
     configPlotTooltipEvent(chart, newChart)
+    configAxisLabelLengthLimit(chart, newChart)
     return newChart
   }
   protected configBasicStyle(chart: Chart, options: BarOptions): BarOptions {
@@ -239,27 +249,30 @@ export class ProgressBar extends G2PlotChartView<BarOptions, G2Progress> {
 
   protected configLabel(chart: Chart, options: BarOptions): BarOptions {
     const baseOptions = super.configLabel(chart, options)
-    if (!baseOptions.label) {
-      return baseOptions
+    if (!baseOptions.label) return baseOptions
+    if (!baseOptions.label.layout?.[0]) {
+      baseOptions.label.layout = [{ type: 'limit-in-canvas' }]
     }
     const { label: labelAttr } = parseJson(chart.customAttr)
     baseOptions.label.style.fill = labelAttr.color
     const label = {
       ...baseOptions.label,
       content: item => {
-        if (item.type === 'target') {
-          return ''
+        if (item.type === 'target') return ''
+        let text = ''
+        if (labelAttr.showQuota) text += valueFormatter(item.value, labelAttr.quotaLabelFormatter)
+        if (labelAttr.showProportion) {
+          let proportion = item.originalProgress.toFixed(labelAttr.reserveDecimalCount) + '%'
+          if (labelAttr.showQuota) {
+            proportion = ` (${proportion}) `
+          }
+          text += proportion
         }
-        return item.originalProgress.toFixed(2) + '%'
+        return text
       }
     }
-    if (label.position === 'top') {
-      label.position = 'right'
-    }
-    return {
-      ...baseOptions,
-      label
-    }
+    if (label.position === 'top') label.position = 'right'
+    return { ...baseOptions, label }
   }
   protected configYAxis(chart: Chart, options: BarOptions): BarOptions {
     const baseOption = super.configYAxis(chart, options)
@@ -290,6 +303,8 @@ export class ProgressBar extends G2PlotChartView<BarOptions, G2Progress> {
     chart.customStyle.legend.show = false
     chart.customAttr.label.show = true
     chart.customAttr.label.position = 'right'
+    chart.customAttr.label.showQuota = false
+    chart.customAttr.label.showProportion = true
     return chart
   }
 

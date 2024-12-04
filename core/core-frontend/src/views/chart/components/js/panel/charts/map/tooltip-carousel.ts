@@ -6,18 +6,16 @@ import { parseJson } from '@/views/chart/components/js/util'
 import { Scene } from '@antv/l7-scene'
 import { deepCopy } from '@/utils/utils'
 
-export const configCarouselTooltip = (chart, view, data, scene, areaId?) => {
+export const configCarouselTooltip = (chart, view, data, scene, customSubArea, drawOption?) => {
   if (['bubble-map', 'map'].includes(chart.type)) {
     data = view.source.data.dataArray
       ?.filter(i => i.dimensionList?.length > 0)
       .reduce((acc, current) => {
         const existingItem = acc.find(obj => {
-          if (areaId.startsWith('000')) {
-            return obj.name === current.name
-          } else if (areaId.startsWith('156')) {
-            return obj.adcode === current.adcode
+          if (drawOption?.areaId?.startsWith('custom_')) {
+            return obj.areaName === current.areaName
           } else {
-            return obj.name === current.name
+            return obj.name === current.name || (obj.adcode && obj.adcode === current.adcode)
           }
         })
         if (!existingItem) {
@@ -28,9 +26,9 @@ export const configCarouselTooltip = (chart, view, data, scene, areaId?) => {
   }
   if (carouselManagerInstances[chart.container]) {
     const instances = carouselManagerInstances[chart.container]
-    instances.update(scene, chart, view, data)
+    instances.update(scene, chart, view, data, customSubArea, drawOption)
   } else {
-    new CarouselManager(scene, chart, view, data)
+    new CarouselManager(scene, chart, view, data, customSubArea, drawOption)
   }
 }
 export const carouselManagerInstances: { [key: string]: CarouselManager } = {}
@@ -87,18 +85,30 @@ export class CarouselManager {
    */
   private popup: Popup
 
+  /**
+   * 自定义区域列表
+   * @private
+   */
+  private customSubArea: CustomGeoSubArea[]
+
+  /**
+   * 渲染参数
+   * @private
+   */
+  private drawOption: L7PlotDrawOptions
+
   // 保存事件监听函数的引用
   private onMouseEnterHandler: () => void
   private onMouseLeaveHandler: () => void
   private onVisibilityChangeHandler: () => void
 
-  constructor(scene, chart, view, data: any[]) {
+  constructor(scene, chart, view, data: any[], customSubArea, drawOption?) {
     // 绑定事件处理函数
     this.onMouseEnterHandler = this.pauseCarouselPopups.bind(this)
     this.onMouseLeaveHandler = this.resumeCarouselPopups.bind(this)
     this.onVisibilityChangeHandler = this.handleVisibilityChange.bind(this)
     this.clearExistingTimers = this.clearExistingTimers.bind(this)
-    this.init(scene, chart, view, data)
+    this.init(scene, chart, view, data, customSubArea, drawOption)
   }
 
   /**
@@ -107,9 +117,10 @@ export class CarouselManager {
    * @param chart
    * @param view
    * @param data
+   * @param customSubArea
    */
-  public update(scene, chart, view, data: any[]) {
-    this.init(scene, chart, view, data)
+  public update(scene, chart, view, data: any[], customSubArea, drawOption?) {
+    this.init(scene, chart, view, data, customSubArea, drawOption)
   }
 
   /**
@@ -120,13 +131,15 @@ export class CarouselManager {
    * @param data
    * @private
    */
-  private init(scene, chart, view, data: any[]) {
+  private init(scene, chart, view, data: any[], customSubArea, drawOption?) {
     this.view = view
     this.chart = chart
     this.scene = scene
     this.data = data
     this.popup = null
     this.currentIndex = 0
+    this.customSubArea = customSubArea
+    this.drawOption = drawOption
     this.clearPreviousInstance(this.chart.container)
     if (
       this.chart.customAttr?.tooltip?.show &&
@@ -342,6 +355,23 @@ export class CarouselManager {
   }
 
   private getActiveData(index): any {
+    if (this.drawOption?.areaId?.startsWith('custom_')) {
+      const result = {
+        type: 'FeatureCollection',
+        features: []
+      }
+      const area = this.customSubArea.find(a => a.name === this.data[index].areaName)
+      const areaMap = this.view.currentDistrictData.features.reduce((p, n) => {
+        p['156' + n.properties.adcode] = n
+        return p
+      }, {})
+      area?.scopeArr?.forEach(s => {
+        if (areaMap[s]) {
+          result.features.push(areaMap[s])
+        }
+      })
+      return result
+    }
     return {
       type: 'FeatureCollection',
       features: [
@@ -358,11 +388,21 @@ export class CarouselManager {
    * @private
    */
   private getPopupData(index: number): any {
-    return {
-      data: this.data[index],
-      centroid: this.view.currentDistrictData.features.find(
-        i => i.properties.name === this.data[index].name
-      )?.properties.centroid
+    if (this.drawOption?.areaId?.startsWith('custom_')) {
+      const data = this.data[index]
+      const area = this.customSubArea?.find(a => a.name === data.areaName)
+      data.name = data.areaName
+      return {
+        data,
+        centroid: area.centroid
+      }
+    } else {
+      return {
+        data: this.data[index],
+        centroid: this.view.currentDistrictData.features.find(
+          i => i.properties.name === this.data[index].name
+        )?.properties.centroid
+      }
     }
   }
 

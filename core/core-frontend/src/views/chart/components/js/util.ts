@@ -7,7 +7,7 @@ import { getGeoJson } from '@/api/map'
 import { computed, toRaw } from 'vue'
 import { Options } from '@antv/g2plot/esm'
 import { PickOptions } from '@antv/g2plot/esm/core/plot'
-import { innerExportDetails } from '@/api/chart'
+import { innerExportDataSetDetails, innerExportDetails } from '@/api/chart'
 import { ElMessage } from 'element-plus-secondary'
 import { useI18n } from '@/hooks/web/useI18n'
 import { useLinkStoreWithOut } from '@/store/modules/link'
@@ -456,8 +456,12 @@ export const getGeoJsonFile = async (areaId: string): Promise<FeatureCollection>
   return toRaw(geoJson)
 }
 
-const getExcelDownloadRequest = data => {
-  const fields = JSON.parse(JSON.stringify(data.fields))
+const getExcelDownloadRequest = (data, type?) => {
+  let fields = JSON.parse(JSON.stringify(data.fields))
+  // liquid gauge 只需要导出一个字段
+  if (['gauge', 'liquid'].includes(type) && fields.length > 1) {
+    fields = fields.slice(1)
+  }
   const tableRow = JSON.parse(JSON.stringify(data.tableRow))
   const excelHeader = fields.map(item => item.chartShowName ?? item.name)
   const excelTypes = fields.map(item => item.deType)
@@ -498,9 +502,11 @@ export const exportExcelDownload = (chart, callBack?) => {
   const excelName = chart.title
   let request: any = {
     proxy: null,
+    dvId: chart.sceneId,
     viewId: chart.id,
     viewInfo: chart,
     viewName: excelName,
+    busiFlag: chart.busiFlag,
     downloadType: chart.downloadType
   }
   if (chart.type.includes('chart-mix')) {
@@ -514,7 +520,7 @@ export const exportExcelDownload = (chart, callBack?) => {
       delete request.multiInfo
     }
   } else {
-    const req = getExcelDownloadRequest(chart.data)
+    const req = getExcelDownloadRequest(chart.data, chart.type)
     request = {
       ...request,
       ...req
@@ -530,7 +536,8 @@ export const exportExcelDownload = (chart, callBack?) => {
   if (isDataEaseBi.value || appStore.getIsIframe) {
     request.dataEaseBi = true
   }
-  innerExportDetails(request)
+  const method = request.downloadType === 'dataset' ? innerExportDataSetDetails : innerExportDetails
+  method(request)
     .then(res => {
       if (linkStore.getLinkToken || isDataEaseBi.value || appStore.getIsIframe) {
         const blob = new Blob([res.data], { type: 'application/vnd.ms-excel' })
@@ -1067,4 +1074,91 @@ export function filterEmptyMinValue(sourceData, field) {
     }
   )
   return notEmptyMinValue
+}
+
+/**
+ * 获取折线条件样式
+ * @param chart
+ */
+export function getLineConditions(chart) {
+  const { threshold } = parseJson(chart.senior)
+  const conditions = []
+  if (threshold.enable) {
+    threshold.lineThreshold?.forEach(item =>
+      item.conditions?.forEach(c =>
+        conditions.push({
+          fieldId: item.fieldId,
+          term: c.term,
+          value: c.value,
+          color: c.color,
+          min: c.min,
+          max: c.max
+        })
+      )
+    )
+  }
+  return conditions
+}
+
+/**
+ * 根据折线阈值条件获取新的标签颜色
+ * @param conditions
+ * @param value
+ * @param fieldId
+ */
+export function getLineLabelColorByCondition(conditions, value, fieldId) {
+  const fieldConditions = conditions.filter(item => item.fieldId === fieldId)
+  let color = undefined
+  if (fieldConditions.length) {
+    fieldConditions.some(item => {
+      if (
+        (item.term === 'lt' && value <= item.value) ||
+        (item.term === 'gt' && value >= item.value) ||
+        (item.term === 'between' && value >= item.min && value <= item.max)
+      ) {
+        color = item.color
+        return true
+      }
+    })
+  }
+  return color
+}
+
+/**
+ * 获取文本在画布中的测量信息
+ * @param chart 图表内容
+ * @param text 测量文本
+ * @param font 文本样式
+ * @param type 测量类型，高度宽度
+ **/
+export const measureText = (chart, text, font, type) => {
+  const container = document.getElementById(chart.container)
+  const canvas = container.querySelector('canvas')
+  const ctx = canvas.getContext('2d')
+  const { fontWeight, fontSize, fontFamily } = font
+  ctx.font = [fontWeight, `${fontSize}px`, fontFamily].join(' ').trim()
+  const textMetrics = ctx.measureText(text)
+  if (type === 'height') {
+    return textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent
+  }
+  if (type === 'width') {
+    return textMetrics.actualBoundingBoxRight + textMetrics.actualBoundingBoxLeft
+  }
+  return 0
+}
+
+/**
+ * 获取十六进制颜色值
+ * @param hex
+ * @param alpha
+ */
+export const hexToRgba = (hex, alpha = 1) => {
+  // 去掉 # 号
+  hex = hex.replace('#', '')
+  // 转换为 RGB 分量
+  const r = parseInt(hex.slice(0, 2), 16)
+  const g = parseInt(hex.slice(2, 4), 16)
+  const b = parseInt(hex.slice(4, 6), 16)
+  // 返回 RGBA 格式
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }

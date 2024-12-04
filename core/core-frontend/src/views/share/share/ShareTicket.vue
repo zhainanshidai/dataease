@@ -147,7 +147,7 @@
     </div>
 
     <div class="ticket-btn">
-      <el-button type="primary" @click.stop="finish"> 完成 </el-button>
+      <el-button type="primary" @click.stop="finish"> {{ $t('components.complete') }} </el-button>
     </div>
   </div>
 </template>

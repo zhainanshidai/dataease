@@ -4,6 +4,7 @@ export interface BusiTreeNode {
   name: string
   leaf?: boolean
   weight: number
+  ext?: number
   extraFlag: number
   children?: BusiTreeNode[]
 }

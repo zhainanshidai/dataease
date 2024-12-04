@@ -1,7 +1,7 @@
 <template>
   <div
     class="bar-main"
-    v-if="!mobileInPc"
+    v-if="!mobileInPc && !isMobile()"
     :class="[
       showEditPosition,
       {
@@ -13,7 +13,7 @@
     <el-tooltip
       effect="dark"
       placement="top"
-      :content="'排序'"
+      :content="t('visualization.sort')"
       v-if="element.component === 'DeTabs' && showPosition === 'canvas'"
     >
       <el-icon class="bar-base-icon" @click="tabSort">
@@ -21,12 +21,12 @@
       </el-icon>
     </el-tooltip>
     <template v-if="element.component === 'VQuery' && showPosition === 'canvas'">
-      <span title="添加查询条件">
+      <span :title="t('visualization.add_query_filter')">
         <el-icon class="bar-base-icon" @click="addQueryCriteria">
           <Icon name="icon_add_outlined"><icon_add_outlined class="svg-icon" /></Icon
         ></el-icon>
       </span>
-      <span title="编辑查询条件">
+      <span :title="t('visualization.edit_query_filter')">
         <el-icon class="bar-base-icon" @click="editQueryCriteria">
           <Icon name="icon_edit_outlined"><icon_edit_outlined class="svg-icon" /></Icon
         ></el-icon>
@@ -47,7 +47,7 @@
     <el-tooltip
       effect="dark"
       :placement="showBarTooltipPosition"
-      content="查看数据"
+      :content="t('visualization.show_data_info')"
       v-if="!['picture-group', 'rich-text'].includes(element.innerType) && barShowCheck('details')"
     >
       <span>
@@ -59,7 +59,7 @@
     <el-tooltip
       effect="dark"
       placement="top"
-      content="输入计算数据"
+      :content="t('visualization.input_calc_data')"
       v-if="barShowCheck('datasetParams') && datasetParamsSetShow"
     >
       <span>
@@ -102,14 +102,14 @@
       </el-icon>
       <template #dropdown>
         <el-dropdown-menu style="width: 158px">
-          <el-dropdown-item @click="copyComponent" v-if="barShowCheck('copy')"
-            >复制</el-dropdown-item
-          >
+          <el-dropdown-item @click="copyComponent" v-if="barShowCheck('copy')">{{
+            t('visualization.copy')
+          }}</el-dropdown-item>
           <template v-if="element.innerType !== 'rich-text' && barShowCheck('enlarge')">
             <el-dropdown-item
               :divided="showPosition === 'canvas'"
               @click="userViewEnlargeOpen($event, 'enlarge')"
-              >放大</el-dropdown-item
+              >{{ t('visualization.enlarge') }}</el-dropdown-item
             >
             <el-dropdown-item
               @click="userViewEnlargeOpen($event, 'details')"
@@ -117,14 +117,15 @@
                 !['picture-group', 'rich-text'].includes(element.innerType) &&
                 barShowCheck('details')
               "
-              >查看数据</el-dropdown-item
+              >{{ t('visualization.show_data_info') }}</el-dropdown-item
             >
             <el-dropdown-item
               style="padding: 0"
               v-if="
                 !['picture-group', 'rich-text'].includes(element.innerType) &&
                 barShowCheck('download') &&
-                showDownload
+                showDownload &&
+                (exportPermissions[0] || exportPermissions[1])
               "
               @click.prevent
             >
@@ -133,19 +134,23 @@
                   class="flex-align-center"
                   style="width: 100%; padding: 5px 6px 5px 16px; line-height: 24px"
                 >
-                  导出为
+                  {{ t('visualization.export_as') }}
                   <el-icon size="16px" style="margin-left: auto"><ArrowRight /></el-icon>
                 </div>
                 <template #dropdown>
                   <el-dropdown-menu style="width: 120px">
-                    <el-dropdown-item @click="exportAsExcel">Excel</el-dropdown-item>
+                    <el-dropdown-item v-if="exportPermissions[1]" @click="exportAsExcel"
+                      >Excel</el-dropdown-item
+                    >
                     <el-dropdown-item
-                      v-if="element.innerType === 'table-pivot'"
+                      v-if="exportPermissions[1] && element.innerType === 'table-pivot'"
                       @click="exportAsFormattedExcel"
                     >
-                      <span>Excel(带格式)</span>
+                      <span>{{ t('visualization.excel_with_format') }}</span>
                     </el-dropdown-item>
-                    <el-dropdown-item @click="exportAsImage">图片</el-dropdown-item>
+                    <el-dropdown-item v-if="exportPermissions[0]" @click="exportAsImage">{{
+                      t('visualization.image')
+                    }}</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -156,9 +161,9 @@
             jsname="L2NvbXBvbmVudC90aHJlc2hvbGQtd2FybmluZy9FZGl0QmFySGFuZGxlcg=="
             @close-item="closeItem"
           />
-          <el-dropdown-item divided @click="deleteComponent" v-if="barShowCheck('delete')"
-            >删除</el-dropdown-item
-          >
+          <el-dropdown-item divided @click="deleteComponent" v-if="barShowCheck('delete')">{{
+            t('visualization.delete')
+          }}</el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </el-dropdown>
@@ -168,8 +173,8 @@
       v-if="
         !['picture-group', 'rich-text'].includes(element.innerType) &&
         barShowCheck('previewDownload') &&
-        authShow &&
-        showDownload
+        showDownload &&
+        (exportPermissions[0] || exportPermissions[1])
       "
     >
       <el-icon @click="downloadClick" class="bar-base-icon">
@@ -179,14 +184,18 @@
       </el-icon>
       <template #dropdown>
         <el-dropdown-menu style="width: 118px">
-          <el-dropdown-item @click="exportAsExcel">Excel</el-dropdown-item>
+          <el-dropdown-item @click="exportAsExcel" v-if="exportPermissions[1]"
+            >Excel</el-dropdown-item
+          >
           <el-dropdown-item
-            v-if="element.innerType === 'table-pivot'"
+            v-if="exportPermissions[1] && element.innerType === 'table-pivot'"
             @click="exportAsFormattedExcel"
           >
-            <span>Excel(带格式)</span>
+            <span>{{ t('visualization.excel_with_format') }}</span>
           </el-dropdown-item>
-          <el-dropdown-item @click="exportAsImage">图片</el-dropdown-item>
+          <el-dropdown-item v-if="exportPermissions[0]" @click="exportAsImage">{{
+            t('visualization.image')
+          }}</el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </el-dropdown>
@@ -198,7 +207,7 @@
       </template>
       <fields-list :fields="state.curFields" :element="element" />
     </el-popover>
-    <custom-tabs-sort ref="customTabsSortRef" :element="element"></custom-tabs-sort>
+    <custom-tabs-sort ref="customTabsSortRef"></custom-tabs-sort>
   </div>
 </template>
 
@@ -227,12 +236,14 @@ import { ElMessage, ElTooltip, ElButton } from 'element-plus-secondary'
 import CustomTabsSort from '@/custom-component/de-tabs/CustomTabsSort.vue'
 import { exportPivotExcel } from '@/views/chart/components/js/panel/common/common_table'
 import { XpackComponent } from '@/components/plugin'
-import DatasetParamsComponent from '@/components/visualization/DatasetParamsComponent.vue'
+import { exportPermission, isMobile } from '@/utils/utils'
 const dvMainStore = dvMainStoreWithOut()
 const snapshotStore = snapshotStoreWithOut()
 const copyStore = copyStoreWithOut()
 const customTabsSortRef = ref(null)
-const authShow = computed(() => !dvInfo.value.weight || dvInfo.value.weight > 3)
+const exportPermissions = computed(() =>
+  exportPermission(dvInfo.value['weight'], dvInfo.value['ext'])
+)
 const emits = defineEmits([
   'userViewEnlargeOpen',
   'datasetParamsInit',
@@ -356,7 +367,7 @@ const state = reactive({
 })
 
 const tabSort = () => {
-  customTabsSortRef.value.sortInit()
+  customTabsSortRef.value.sortInit(element.value)
 }
 
 const downloadClick = () => {
@@ -442,7 +453,7 @@ const exportAsExcel = () => {
   const viewDataInfo = dvMainStore.getViewDataDetails(element.value.id)
   const chartExtRequest = dvMainStore.getLastViewRequestInfo(element.value.id)
   const viewInfo = dvMainStore.getViewDetails(element.value.id)
-  const chart = { ...viewInfo, chartExtRequest, data: viewDataInfo }
+  const chart = { ...viewInfo, chartExtRequest, data: viewDataInfo, busiFlag: dvInfo.value.type }
   exportExcelDownload(chart, () => {
     openMessageLoading(callbackExport)
   })

@@ -168,7 +168,11 @@ public class ExtWhere2Str {
                                     || StringUtils.containsIgnoreCase(request.getDatasetTableField().getType(), "NCHAR")) {
                                 whereValue = "(" + value.stream().map(str -> "'" + SQLConstants.MSSQL_N_PREFIX + str + "'").collect(Collectors.joining(",")) + ")";
                             } else {
-                                whereValue = "('" + StringUtils.join(value, "','") + "')";
+                                if (request.getDatasetTableField().getDeType() == 2 || request.getDatasetTableField().getDeType() == 3) {
+                                    whereValue = "(" + StringUtils.join(value, ",") + ")";
+                                } else {
+                                    whereValue = "('" + StringUtils.join(value, "','") + "')";
+                                }
                             }
                         }
                     }
@@ -212,7 +216,11 @@ public class ExtWhere2Str {
                                 whereName = String.format(SQLConstants.UNIX_TIMESTAMP, whereName);
                                 whereValue = String.format(SQLConstants.WHERE_BETWEEN, Long.parseLong(value.get(0)), Long.parseLong(value.get(1)));
                             } else {
-                                whereValue = String.format(SQLConstants.WHERE_BETWEEN, Utils.transLong2Str(Long.parseLong(value.get(0))), Utils.transLong2Str(Long.parseLong(value.get(1))));
+                                if (StringUtils.equalsIgnoreCase(request.getDatasetTableField().getType(), "date")) {
+                                    whereValue = String.format(SQLConstants.WHERE_BETWEEN, Utils.transLong2StrShort(Long.parseLong(value.get(0))), Utils.transLong2StrShort(Long.parseLong(value.get(1))));
+                                } else {
+                                    whereValue = String.format(SQLConstants.WHERE_BETWEEN, Utils.transLong2Str(Long.parseLong(value.get(0))), Utils.transLong2Str(Long.parseLong(value.get(1))));
+                                }
                             }
                         }
                     } else if (request.getDatasetTableField().getDeType() == 2

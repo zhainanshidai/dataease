@@ -116,7 +116,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <el-collapse-item :effect="themes" title="图片组" name="picture">
+  <el-collapse-item :effect="themes" :title="t('visualization.pic_group')" name="picture">
     <el-row class="img-area" :class="`img-area_${themes}`">
       <el-col style="width: 130px !important">
         <el-upload
@@ -141,14 +141,15 @@ onBeforeUnmount(() => {
     </el-row>
     <el-row>
       <span style="margin-top: 2px" class="image-hint" :class="`image-hint_${themes}`">
-        支持JPG、PNG、GIF、SVG
+        {{ t('visualization.pic_upload_tips2') }}
       </span>
     </el-row>
     <el-row class="pic-adaptor">
       <el-form-item
         v-if="curComponent.style.adaptation"
         class="form-item form-item-custom"
-        label="图片适应方式"
+        :class="'form-item-' + themes"
+        :label="t('visualization.pic_adaptor_type')"
         size="small"
         :effect="themes"
       >
@@ -158,9 +159,15 @@ onBeforeUnmount(() => {
           @change="onStyleChange"
           :effect="themes"
         >
-          <el-radio label="adaptation" :effect="themes">适应组件</el-radio>
-          <el-radio label="original" :effect="themes">原始尺寸</el-radio>
-          <el-radio label="equiratio" :effect="themes">等比适应</el-radio>
+          <el-radio label="adaptation" :effect="themes">{{
+            t('visualization.pic_adaptation')
+          }}</el-radio>
+          <el-radio label="original" :effect="themes">{{
+            t('visualization.pic_original')
+          }}</el-radio>
+          <el-radio label="equiratio" :effect="themes">{{
+            t('visualization.pic_equiratio')
+          }}</el-radio>
         </el-radio-group>
       </el-form-item>
     </el-row>

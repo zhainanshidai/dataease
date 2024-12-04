@@ -157,10 +157,22 @@ public class SqlparserUtils {
             for (Join join : joins) {
                 FromItem rightItem = join.getRightItem();
                 if (rightItem instanceof ParenthesedSelect) {
-                    PlainSelect selectBody = ((ParenthesedSelect) rightItem).getPlainSelect();
-                    Select subSelectTmp = (Select) CCJSqlParserUtil.parse(removeVariables(selectBody.toString(), dsType));
-                    PlainSelect subPlainSelect = ((PlainSelect) subSelectTmp.getSelectBody());
-                    ((ParenthesedSelect) rightItem).setSelect(subPlainSelect);
+                   try {
+                       PlainSelect selectBody = ((ParenthesedSelect) rightItem).getPlainSelect();
+                       Select subSelectTmp = (Select) CCJSqlParserUtil.parse(removeVariables(selectBody.toString(), dsType));
+                       PlainSelect subPlainSelect = ((PlainSelect) subSelectTmp.getSelectBody());
+                       ((ParenthesedSelect) rightItem).setSelect(subPlainSelect);
+                   }catch ( Exception e ){
+                       SetOperationList  select = ((ParenthesedSelect) rightItem).getSetOperationList();
+                       SetOperationList setOperationList = new SetOperationList();
+                       setOperationList.setSelects(new ArrayList<>());
+                       setOperationList.setOperations(select.getOperations());
+                       for (Select selectSelect : select.getSelects()) {
+                           Select subSelectTmp = (Select) CCJSqlParserUtil.parse(removeVariables(selectSelect.toString(), dsType));
+                           setOperationList.getSelects().add(subSelectTmp);
+                       }
+                       ((ParenthesedSelect) rightItem).setSelect(setOperationList);
+                   }
                     if (dsType.equals(DatasourceConfiguration.DatasourceType.oracle.getType())) {
                         rightItem.setAlias(new Alias(rightItem.getAlias().toString(), false));
                     } else {
@@ -507,6 +519,12 @@ public class SqlparserUtils {
         if (StringUtils.isEmpty(sql)) {
             DEException.throwException(Translator.get("i18n_sql_not_empty"));
         }
+        try {
+            removeVariables(sql, "");
+        } catch (Exception e) {
+            DEException.throwException(e);
+        }
+
         sql = sql.trim();
         if (sql.endsWith(";")) {
             sql = sql.substring(0, sql.length() - 1);
@@ -600,7 +618,11 @@ public class SqlparserUtils {
                     && sqlVariableDetails.getDeType() == 0) {
                 return "N'" + String.join("', N'", sqlVariableDetails.getValue()) + "'";
             } else {
-                return "'" + String.join("','", sqlVariableDetails.getValue()) + "'";
+                if (sqlVariableDetails.getDeType() == 2 || sqlVariableDetails.getDeType() == 3) {
+                    return String.join(",", sqlVariableDetails.getValue());
+                } else {
+                    return "'" + String.join("','", sqlVariableDetails.getValue()) + "'";
+                }
             }
         } else if (sqlVariableDetails.getOperator().equals("between")) {
             if (sqlVariableDetails.getDeType() == 1) {

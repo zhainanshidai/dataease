@@ -7,6 +7,7 @@ interface SelectConfig {
   id: string
   conditionValueOperatorF: string
   conditionValueF: string
+  queryConditionWidth: string
   hideConditionSwitching: boolean
   conditionValueOperatorS: string
   conditionValueS: string
@@ -46,6 +47,7 @@ const props = defineProps({
       return {
         id: '',
         conditionType: 0,
+        queryConditionWidth: 0,
         conditionValueOperatorF: 'eq',
         conditionValueF: '',
         conditionValueOperatorS: 'like',
@@ -82,8 +84,18 @@ onBeforeMount(() => {
 const queryConditionWidth = inject('com-width', Function, true)
 const customStyle = inject<{ background: string }>('$custom-style-filter')
 const isConfirmSearch = inject('is-confirm-search', Function, true)
+
+const getCustomWidth = () => {
+  if (placeholder?.value?.placeholderShow) {
+    if (props.config.queryConditionWidth === undefined) {
+      return queryConditionWidth()
+    }
+    return props.config.queryConditionWidth
+  }
+  return 227
+}
 const selectStyle = computed(() => {
-  return { width: queryConditionWidth() + 'px' }
+  return { width: getCustomWidth() + 'px' }
 })
 const handleValueChange = () => {
   if (!props.isConfig) {
@@ -94,12 +106,20 @@ const handleValueChange = () => {
   }
 }
 const lineWidth = computed(() => {
-  return { width: queryConditionWidth() - 15 + 'px' }
+  return { width: getCustomWidth() - 15 + 'px' }
 })
+
+const handleInnerMouseDown = e => {
+  e.stopPropagation()
+}
 </script>
 
 <template>
-  <div class="text-search-select" :style="{ background: customStyle.background }">
+  <div
+    @mousedown="handleInnerMouseDown"
+    class="text-search-select"
+    :style="{ background: customStyle.background }"
+  >
     <div class="condition-type">
       <el-select
         class="condition-value-select"
@@ -122,9 +142,9 @@ const lineWidth = computed(() => {
       <div :style="lineWidth" class="bottom-line"></div>
     </div>
     <div class="condition-type" v-if="[1, 2].includes(config.conditionType)">
-      <sapn class="condition-type-tip">{{
+      <span class="condition-type-tip">{{
         config.conditionType === 1 ? t('chart.and') : t('chart.or')
-      }}</sapn>
+      }}</span>
       <el-select
         v-if="!config.hideConditionSwitching"
         class="condition-value-select"

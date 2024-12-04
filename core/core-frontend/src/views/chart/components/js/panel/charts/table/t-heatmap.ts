@@ -8,6 +8,7 @@ import { useI18n } from '@/hooks/web/useI18n'
 import { deepCopy } from '@/utils/utils'
 import { cloneDeep } from 'lodash-es'
 import {
+  configAxisLabelLengthLimit,
   getPadding,
   getXAxis,
   getYAxis
@@ -38,7 +39,15 @@ export class TableHeatmap extends G2PlotChartView<HeatmapOptions, Heatmap> {
     'basic-style-selector': ['colors'],
     'label-selector': ['fontSize', 'color'],
     'x-axis-selector': ['name', 'color', 'fontSize', 'position', 'axisLabel', 'axisLine'],
-    'y-axis-selector': ['name', 'color', 'fontSize', 'position', 'axisLabel', 'axisLine'],
+    'y-axis-selector': [
+      'name',
+      'color',
+      'fontSize',
+      'position',
+      'axisLabel',
+      'axisLine',
+      'showLengthLimit'
+    ],
     'title-selector': [
       'title',
       'fontSize',
@@ -194,6 +203,7 @@ export class TableHeatmap extends G2PlotChartView<HeatmapOptions, Heatmap> {
         }
       }
     })
+    configAxisLabelLengthLimit(chart, newChart)
     return newChart
   }
 

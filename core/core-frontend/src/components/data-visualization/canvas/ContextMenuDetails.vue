@@ -12,6 +12,7 @@ import eventBus from '@/utils/eventBus'
 import { componentArraySort, getCurInfo } from '@/store/modules/data-visualization/common'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import { XpackComponent } from '@/components/plugin'
+import { useI18n } from '@/hooks/web/useI18n'
 const dvMainStore = dvMainStoreWithOut()
 const copyStore = copyStoreWithOut()
 const lockStore = lockStoreWithOut()
@@ -31,7 +32,7 @@ const props = defineProps({
 })
 
 const { activePosition } = toRefs(props)
-
+const { t } = useI18n()
 const popComponentDataLength = computed(
   () => componentData.value.filter(ele => ele.category === 'hidden').length
 )
@@ -49,8 +50,13 @@ const lock = () => {
 }
 
 const unlock = () => {
-  snapshotStore.recordSnapshotCache()
-  lockStore.unlock()
+  if (curComponent.value && !isGroupArea.value) {
+    lockStore.unlock()
+  } else if (areaData.value.components.length) {
+    areaData.value.components.forEach(component => {
+      lockStore.unlock(component)
+    })
+  }
   menuOpt('unlock')
 }
 
@@ -81,14 +87,26 @@ const copy = () => {
 }
 
 const hide = () => {
+  if (curComponent.value && !isGroupArea.value) {
+    layerStore.hideComponentWithComponent()
+  } else if (areaData.value.components.length) {
+    areaData.value.components.forEach(component => {
+      layerStore.hideComponentWithComponent(component.id)
+    })
+  }
   snapshotStore.recordSnapshotCache()
-  layerStore.hideComponent()
   menuOpt('hide')
 }
 
 const show = () => {
+  if (curComponent.value && !isGroupArea.value) {
+    layerStore.showComponent()
+  } else if (areaData.value.components.length) {
+    areaData.value.components.forEach(component => {
+      layerStore.showComponent(component.id)
+    })
+  }
   snapshotStore.recordSnapshotCache()
-  layerStore.showComponent()
   menuOpt('show')
 }
 const categoryChange = type => {
@@ -176,6 +194,11 @@ const bottomComponent = () => {
   menuOpt('bottomComponent')
 }
 
+const customSort = () => {
+  // do customSort
+  eventBus.emit('tabSort')
+}
+
 const componentCompose = () => {
   composeStore.compose()
   snapshotStore.recordSnapshotCache('componentCompose')
@@ -221,7 +244,9 @@ const editQueryCriteria = () => {
   <div class="context-menu-base context-menu-details" @mousedown="handleComposeMouseDown">
     <ul @mouseup="handleMouseUp">
       <template v-if="areaData.components.length">
-        <li @mousedown="handleComposeMouseDown" @click="componentCompose">组合</li>
+        <li @mousedown="handleComposeMouseDown" @click="componentCompose">
+          {{ t('visualization.view_group') }}
+        </li>
         <el-dropdown
           style="width: 100%"
           trigger="hover"
@@ -231,54 +256,68 @@ const editQueryCriteria = () => {
         >
           <li>
             <div>
-              <span>对齐</span><el-icon><ArrowRight /></el-icon>
+              <span>{{ t('visualization.alignment') }}</span
+              ><el-icon><ArrowRight /></el-icon>
             </div>
           </li>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item style="width: 118px" @click="alignment('left')"
-                >左对齐</el-dropdown-item
-              >
-              <el-dropdown-item style="width: 118px" @click="alignment('right')"
-                >右对齐</el-dropdown-item
-              >
-              <el-dropdown-item @click="alignment('top')">上对齐</el-dropdown-item>
-              <el-dropdown-item @click="alignment('bottom')">下对齐</el-dropdown-item>
-              <el-dropdown-item @click="alignment('transverse')">水平居中</el-dropdown-item>
-              <el-dropdown-item @click="alignment('direction')">垂直居中</el-dropdown-item>
+              <el-dropdown-item style="width: 118px" @click="alignment('left')">{{
+                t('visualization.left_justifying')
+              }}</el-dropdown-item>
+              <el-dropdown-item style="width: 118px" @click="alignment('right')">{{
+                t('visualization.right_justifying')
+              }}</el-dropdown-item>
+              <el-dropdown-item @click="alignment('top')">{{
+                t('visualization.top_justifying')
+              }}</el-dropdown-item>
+              <el-dropdown-item @click="alignment('bottom')">{{
+                t('visualization.bottom_justifying')
+              }}</el-dropdown-item>
+              <el-dropdown-item @click="alignment('transverse')">{{
+                t('visualization.horizontally_centered')
+              }}</el-dropdown-item>
+              <el-dropdown-item @click="alignment('direction')">{{
+                t('visualization.vertically_centered')
+              }}</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
         <el-divider class="custom-divider" />
-        <li @click="copy">复制</li>
-        <li @click="paste">粘贴</li>
-        <li @click="cut">剪切</li>
+        <li @click="copy">{{ t('visualization.copy') }}</li>
+        <li @click="paste">{{ t('visualization.paste') }}</li>
+        <li @click="cut">{{ t('visualization.cut') }}</li>
         <el-divider class="custom-divider" />
-        <li @click="deleteComponent">删除</li>
+        <li @click="deleteComponent">{{ t('visualization.delete') }}</li>
       </template>
       <li
         v-show="!(!curComponent || curComponent['isLock'] || curComponent['component'] != 'Group')"
         @click="decompose()"
       >
-        取消组合
+        {{ t('visualization.cancel_group') }}
       </li>
       <el-divider class="custom-divider" v-show="composeDivider" />
       <template v-if="curComponent">
         <template v-if="!curComponent['isLock'] && curComponent.category === 'hidden'">
-          <li @click="categoryChange('base')">移动到大屏显示区</li>
-          <li @click="editQueryCriteria">编辑</li>
-          <li v-if="activePosition === 'aside'" @click="rename">重命名</li>
-          <li @click="copy">复制</li>
-          <li @click="paste">粘贴</li>
+          <li @click="categoryChange('base')">{{ t('visualization.move_to_screen_show') }}</li>
+          <li @click="editQueryCriteria">{{ t('visualization.edit') }}</li>
+          <li v-if="activePosition === 'aside'" @click="rename">{{ t('visualization.rename') }}</li>
+          <li @click="copy">{{ t('visualization.copy') }}</li>
+          <li @click="paste">{{ t('visualization.paste') }}</li>
           <el-divider class="custom-divider" />
-          <li @click="deleteComponent">删除</li>
+          <li @click="deleteComponent">{{ t('visualization.delete') }}</li>
         </template>
         <template v-if="!curComponent['isLock'] && curComponent.category !== 'hidden'">
-          <li v-if="curComponent.component === 'VQuery'" @click="editQueryCriteria">编辑</li>
-          <li @click="upComponent">上移一层</li>
-          <li @click="downComponent">下移一层</li>
-          <li @click="topComponent">置于顶层</li>
-          <li @click="bottomComponent">置于底层</li>
+          <li v-if="curComponent.component === 'VQuery'" @click="editQueryCriteria">
+            {{ t('visualization.edit') }}
+          </li>
+          <li @click="upComponent">{{ t('visualization.up_component') }}</li>
+          <li @click="downComponent">{{ t('visualization.down_component') }}</li>
+          <li @click="topComponent">{{ t('visualization.top_component') }}</li>
+          <li @click="bottomComponent">{{ t('visualization.bottom_component') }}</li>
+          <li @click="customSort" v-if="curComponent.component === 'DeTabs'">
+            {{ t('visualization.sort') }}
+          </li>
           <xpack-component
             :chart="curComponent"
             is-screen
@@ -292,23 +331,30 @@ const editQueryCriteria = () => {
               popComponentDataLength === 0
             "
           >
-            移动到大屏弹窗区
+            {{ t('visualization.move_to_pop_area') }}
           </li>
           <el-divider class="custom-divider" />
-          <li @click="hide" v-show="curComponent['isShow']">隐藏</li>
-          <li @click="show" v-show="!curComponent['isShow']">取消隐藏</li>
-          <li @click="lock">锁定</li>
+          <li @click="hide" v-show="curComponent['isShow']">{{ t('visualization.hidden') }}</li>
+          <li @click="show" v-show="!curComponent['isShow'] || isGroupArea">
+            {{ t('visualization.cancel_hidden') }}
+          </li>
+          <li @click="lock">{{ t('visualization.lock') }}</li>
+          <li v-if="curComponent['isLock'] || isGroupArea" @click="unlock">
+            {{ t('visualization.unlock') }}
+          </li>
           <el-divider class="custom-divider" />
-          <li v-if="activePosition === 'aside'" @click="rename">重命名</li>
-          <li @click="copy">复制</li>
-          <li @click="paste">粘贴</li>
-          <li @click="cut">剪切</li>
+          <li v-if="activePosition === 'aside'" @click="rename">{{ t('visualization.rename') }}</li>
+          <li @click="copy">{{ t('visualization.copy') }}</li>
+          <li @click="paste">{{ t('visualization.paste') }}</li>
+          <li @click="cut">{{ t('visualization.cut') }}</li>
           <el-divider class="custom-divider" />
-          <li @click="deleteComponent">删除</li>
+          <li @click="deleteComponent">{{ t('visualization.delete') }}</li>
         </template>
-        <li v-if="curComponent['isLock']" @click="unlock">解锁</li>
+        <li v-if="curComponent['isLock']" @click="unlock">{{ t('visualization.unlock') }}</li>
       </template>
-      <li v-else-if="!curComponent && !areaData.components.length" @click="paste">粘贴</li>
+      <li v-else-if="!curComponent && !areaData.components.length" @click="paste">
+        {{ t('visualization.paste') }}
+      </li>
     </ul>
   </div>
 </template>

@@ -51,7 +51,11 @@ function transUnit(value, formatter) {
 }
 
 function transDecimal(value, formatter) {
-  return value.toFixed(formatter.decimalCount)
+  const resultV = value.toFixed(formatter.decimalCount)
+  if (Object.is(parseFloat(resultV), -0)) {
+    return resultV.slice(1)
+  }
+  return resultV
 }
 
 function transSeparatorAndSuffix(value, formatter) {

@@ -5,7 +5,9 @@ import { ElFormItem, ElIcon } from 'element-plus-secondary'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
 import Icon from '../../components/icon-custom/src/Icon.vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
+import { useI18n } from '@/hooks/web/useI18n'
 const dvMainStore = dvMainStoreWithOut()
+const { t } = useI18n()
 
 const snapshotStore = snapshotStoreWithOut()
 
@@ -46,11 +48,11 @@ const onJumpValueChange = () => {
           size="small"
           v-model="eventsInfo.checked"
           @change="onEventChange"
-          >开启事件绑定</el-checkbox
+          >{{ t('visualization.enable_event_binding') }}</el-checkbox
         >
         <el-tooltip class="item" :effect="themes" placement="top">
           <template #content>
-            <div>事件绑定需退出编辑模式后生效,富文本开启绑定事件则内部点击事件失效</div>
+            <div>{{ t('visualization.event_binding_tips') }}</div>
           </template>
           <el-icon class="hint-icon" :class="{ 'hint-icon--dark': themes === 'dark' }">
             <Icon name="icon_info_outlined"><icon_info_outlined class="svg-icon" /></Icon>
@@ -89,7 +91,7 @@ const onJumpValueChange = () => {
           :effect="themes"
           :disabled="!eventsInfo.checked"
           clearable
-          :placeholder="'请输入跳转地址'"
+          :placeholder="t('visualization.input_url_tips')"
           @change="onJumpValueChange"
         />
       </el-form-item>
@@ -106,9 +108,9 @@ const onJumpValueChange = () => {
           :disabled="!eventsInfo.checked"
           @change="onJumpValueChange"
         >
-          <el-radio :effect="themes" label="_blank">新开页面</el-radio>
-          <el-radio :effect="themes" label="_self">当前页面</el-radio>
-          <el-radio :effect="themes" label="newPop">弹窗页面</el-radio>
+          <el-radio :effect="themes" label="_blank">{{ t('visualization.new_window') }}</el-radio>
+          <el-radio :effect="themes" label="_self">{{ t('visualization.now_window') }}</el-radio>
+          <el-radio :effect="themes" label="newPop">{{ t('visualization.pop_window') }}</el-radio>
         </el-radio-group>
       </el-form-item>
     </el-form>
@@ -118,7 +120,7 @@ const onJumpValueChange = () => {
 <style scoped lang="less">
 .form-item-dark {
   .ed-radio {
-    margin-right: 4px !important;
+    margin-right: 3px !important;
   }
 }
 </style>

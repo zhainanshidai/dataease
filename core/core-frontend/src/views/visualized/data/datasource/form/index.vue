@@ -39,6 +39,7 @@ interface Form {
   id?: string
   description: string
   type: string
+  copy: boolean
   configuration?: Configuration
   apiConfiguration?: ApiConfiguration[]
   paramsConfiguration?: ApiConfiguration[]
@@ -341,7 +342,9 @@ const validateDS = () => {
     }
     let apiItems = []
     apiItems = apiItems.concat(request.apiConfiguration)
-    apiItems = apiItems.concat(request.paramsConfiguration)
+    if (request.paramsConfiguration) {
+      apiItems = apiItems.concat(request.paramsConfiguration)
+    }
     request.configuration = Base64.encode(JSON.stringify(apiItems))
     request.syncSetting.startTime = new Date(request.syncSetting.startTime).getTime()
     request.syncSetting.endTime = new Date(request.syncSetting.endTime).getTime()
@@ -459,7 +462,9 @@ const saveDS = () => {
     }
     let apiItems = []
     apiItems = apiItems.concat(request.apiConfiguration)
-    apiItems = apiItems.concat(request.paramsConfiguration)
+    if (request.paramsConfiguration) {
+      apiItems = apiItems.concat(request.paramsConfiguration)
+    }
     request.configuration = Base64.encode(JSON.stringify(apiItems))
     request.syncSetting.startTime = new Date(request.syncSetting.startTime).getTime()
     request.syncSetting.endTime = new Date(request.syncSetting.endTime).getTime()

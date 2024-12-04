@@ -16,6 +16,8 @@ import { debounce } from 'lodash-es'
 import mobileHeader from '@/assets/img/mobile-header.png'
 import ComponentStyleEditor from '@/views/common/ComponentStyleEditor.vue'
 import { deepCopy } from '@/utils/utils'
+import { useI18n } from '@/hooks/web/useI18n'
+const { t } = useI18n()
 
 const dvMainStore = dvMainStoreWithOut()
 const { componentData, canvasStyleData, canvasViewInfo, dvInfo } = storeToRefs(dvMainStore)
@@ -191,7 +193,7 @@ const hanedleMessage = event => {
 const saveCanvasWithCheckFromMobile = () => {
   snapshotStore.resetStyleChangeTimes()
   canvasSave(() => {
-    ElMessage.success('保存成功')
+    ElMessage.success(t('visualization.save_success'))
   })
 }
 const loadCanvasData = () => {
@@ -256,7 +258,7 @@ const handleBack = () => {
     mobileStatusChange('mobilePatch', undefined)
     return
   }
-  ElMessageBox.confirm('当前的更改尚未保存，确定退出吗？', {
+  ElMessageBox.confirm(t('visualization.change_save_tips'), {
     confirmButtonType: 'primary',
     type: 'warning',
     autofocus: false,
@@ -314,11 +316,12 @@ const save = () => {
       <div class="config-panel-foot"></div>
     </div>
     <div class="mobile-com-list">
-      <div class="config-mobile-sidebar">移动端配置</div>
+      <div class="config-mobile-sidebar">{{ t('visualization.mobile_config') }}</div>
       <el-tabs size="small" v-model="activeCollapse">
-        <el-tab-pane label="可视化组件" name="com"> </el-tab-pane>
-        <el-tab-pane label="组件样式" name="componentStyle"> </el-tab-pane>
-        <el-tab-pane label="整体样式" name="style"> </el-tab-pane>
+        <el-tab-pane :label="t('visualization.visualization_component')" name="com"> </el-tab-pane>
+        <el-tab-pane :label="t('visualization.component_style')" name="componentStyle">
+        </el-tab-pane>
+        <el-tab-pane :label="t('visualization.whole_style')" name="style"> </el-tab-pane>
       </el-tabs>
       <template v-if="!mobileLoading">
         <div class="config-mobile-tab" v-show="activeCollapse === 'style'">
@@ -352,9 +355,9 @@ const save = () => {
               />
             </div>
             <div class="mobile-com-mask" @click="addToMobile(item)">
-              <span v-show="item.component === 'DeStreamMedia'" style="color: #909399"
-                >IOS可能无法显示</span
-              >
+              <span v-show="item.component === 'DeStreamMedia'" style="color: #909399">{{
+                t('visualization.mobile_ios_tips')
+              }}</span>
             </div>
             <div class="pc-select-to-mobile" @click="addToMobile(item)" v-if="!mobileLoading"></div>
           </div>
@@ -368,6 +371,7 @@ const save = () => {
 .mobile-config-panel {
   height: 100vh;
   width: 100vw;
+  overflow: hidden;
   position: relative;
   background: #f5f6f7;
 

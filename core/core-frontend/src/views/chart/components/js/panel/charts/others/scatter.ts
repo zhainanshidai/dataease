@@ -12,7 +12,8 @@ import {
   TOOLTIP_TPL
 } from '../../common/common_antv'
 import { useI18n } from '@/hooks/web/useI18n'
-import { isEmpty } from 'lodash-es'
+import { defaults, isEmpty } from 'lodash-es'
+import { DEFAULT_LEGEND_STYLE } from '@/views/chart/components/editor/util/chart'
 
 const { t } = useI18n()
 /**
@@ -255,9 +256,16 @@ export class Scatter extends G2PlotChartView<ScatterOptions, G2Scatter> {
     if (!optionTmp.legend) {
       return optionTmp
     }
+    const customStyle = parseJson(chart.customStyle)
+    let size
+    if (customStyle && customStyle.legend) {
+      size = defaults(JSON.parse(JSON.stringify(customStyle.legend)), DEFAULT_LEGEND_STYLE).size
+    } else {
+      size = DEFAULT_LEGEND_STYLE.size
+    }
     optionTmp.legend.marker.style = style => {
       return {
-        r: 4,
+        r: size,
         fill: style.fill
       }
     }

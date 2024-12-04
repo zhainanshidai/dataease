@@ -10,6 +10,7 @@ import {
   getToday,
   getYesterday,
   getMonthBeginning,
+  getMonthEnd,
   getYearBeginning,
   getCustomTime
 } from './time-format'
@@ -141,6 +142,9 @@ const init = () => {
       case 'monthBeginning':
         selectValue.value = getMonthBeginning()
         break
+      case 'monthEnd':
+        selectValue.value = getMonthEnd()
+        break
       case 'yearBeginning':
         selectValue.value = getYearBeginning()
         break
@@ -163,6 +167,13 @@ onBeforeMount(() => {
     v-model="selectValue"
     :type="config.timeGranularity"
     :prefix-icon="Calendar"
+    :popper-class="'custom-dynamic-time-popper_class'"
     :placeholder="$t('commons.date.select_date_time')"
   />
 </template>
+
+<style lang="less">
+.custom-dynamic-time-popper_class {
+  font-family: var(--de-canvas_custom_font);
+}
+</style>

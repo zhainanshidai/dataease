@@ -155,7 +155,7 @@ public class FontManage {
         FontDto fontDto = new FontDto();
         try {
             String filename = file.getOriginalFilename();
-            if (StringUtils.isEmpty(filename) || !filename.endsWith(".ttf")) {
+            if (StringUtils.isEmpty(filename) || !filename.toLowerCase().endsWith(".ttf")) {
                 DEException.throwException("非法格式的文件！");
             }
             String suffix = filename.substring(filename.lastIndexOf(".") + 1);

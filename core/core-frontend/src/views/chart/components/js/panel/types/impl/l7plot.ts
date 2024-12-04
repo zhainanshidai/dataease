@@ -21,6 +21,7 @@ export interface L7PlotDrawOptions<P> extends AntVDrawOptions<P> {
   areaId?: string
   level?: ViewLevel['level']
   geoJson?: FeatureCollection
+  scope?: string[]
 }
 // S2 or others to be defined next
 export abstract class L7PlotChartView<

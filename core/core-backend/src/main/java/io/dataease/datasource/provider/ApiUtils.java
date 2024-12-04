@@ -44,6 +44,9 @@ public class ApiUtils {
         };
         List<ApiDefinition> apiDefinitionList = JsonUtil.parseList(datasourceRequest.getDatasource().getConfiguration(), listTypeReference);
         for (ApiDefinition apiDefinition : apiDefinitionList) {
+            if (apiDefinition == null) {
+                continue;
+            }
             if (StringUtils.isNotEmpty(apiDefinition.getType()) && apiDefinition.getType().equalsIgnoreCase("params")) {
                 continue;
             }
@@ -116,6 +119,9 @@ public class ApiUtils {
         List<ApiDefinition> apiDefinitionList = JsonUtil.parseList(datasourceRequest.getDatasource().getConfiguration(), listTypeReference);
         List<ObjectNode> status = new ArrayList();
         for (ApiDefinition apiDefinition : apiDefinitionList) {
+            if (apiDefinition == null) {
+                continue;
+            }
             datasourceRequest.setTable(apiDefinition.getName());
             ObjectNode apiItemStatuses = objectMapper.createObjectNode();
             try {
@@ -573,6 +579,8 @@ public class ApiUtils {
                 if (!ObjectUtils.isEmpty(o.get("jsonPath")) && StringUtils.isNotEmpty(field.getJsonPath()) && field.getJsonPath().equals(o.get("jsonPath").toString())) {
                     o.put("checked", true);
                     o.put("name", field.getName());
+                    o.put("primaryKey", field.isPrimaryKey());
+                    o.put("length", field.getLength());
                     o.put("deExtractType", field.getDeExtractType());
                 }
             }
@@ -715,7 +723,7 @@ public class ApiUtils {
         } catch (Exception e) {
             DEException.throwException(e);
         }
-        return apiDefinitionListTemp.stream().filter(apiDefinition -> apiDefinition.getType() != null && apiDefinition.getType().equalsIgnoreCase("params")).collect(Collectors.toList());
+        return apiDefinitionListTemp.stream().filter(apiDefinition -> apiDefinition != null && apiDefinition.getType() != null && apiDefinition.getType().equalsIgnoreCase("params")).collect(Collectors.toList());
     }
 
     private static ApiDefinition checkApiDefinition(DatasourceRequest datasourceRequest) throws DEException {
@@ -730,6 +738,9 @@ public class ApiUtils {
         }
         if (!CollectionUtils.isEmpty(apiDefinitionListTemp)) {
             for (ApiDefinition apiDefinition : apiDefinitionListTemp) {
+                if (apiDefinition == null) {
+                    continue;
+                }
                 if (apiDefinition.getDeTableName().equalsIgnoreCase(datasourceRequest.getTable()) || apiDefinition.getName().equalsIgnoreCase(datasourceRequest.getTable())) {
                     apiDefinitionList.add(apiDefinition);
                 }
@@ -744,6 +755,9 @@ public class ApiUtils {
         }
         ApiDefinition find = null;
         for (ApiDefinition apiDefinition : apiDefinitionList) {
+            if (apiDefinition == null) {
+                continue;
+            }
             if (apiDefinition.getName().equalsIgnoreCase(datasourceRequest.getTable()) || apiDefinition.getDeTableName().equalsIgnoreCase(datasourceRequest.getTable())) {
                 find = apiDefinition;
             }

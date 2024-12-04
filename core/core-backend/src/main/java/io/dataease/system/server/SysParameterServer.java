@@ -12,7 +12,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/sysParameter")
@@ -59,6 +61,24 @@ public class SysParameterServer implements SysParameterApi {
             }
         }
         return frontTimeOut;
+    }
+
+    @Override
+    public Map<String, Object> defaultSettings() {
+        Map<String, Object> map = new HashMap<>();
+        map.put(XpackSettingConstants.DEFAULT_SORT, "1");
+
+        List<SettingItemVO> settingItemVOS = queryBasicSetting();
+        for (int i = 0; i < settingItemVOS.size(); i++) {
+            SettingItemVO settingItemVO = settingItemVOS.get(i);
+            if (StringUtils.isNotBlank(settingItemVO.getPkey()) && settingItemVO.getPkey().equalsIgnoreCase(XpackSettingConstants.DEFAULT_SORT) && StringUtils.isNotBlank(settingItemVO.getPval())) {
+                map.put(XpackSettingConstants.DEFAULT_SORT, settingItemVO.getPval());
+            }
+            if (StringUtils.isNotBlank(settingItemVO.getPkey()) && settingItemVO.getPkey().equalsIgnoreCase(XpackSettingConstants.DEFAULT_OPEN) && StringUtils.isNotBlank(settingItemVO.getPval())) {
+                map.put(XpackSettingConstants.DEFAULT_OPEN, settingItemVO.getPval());
+            }
+        }
+        return map;
     }
 
     @Override

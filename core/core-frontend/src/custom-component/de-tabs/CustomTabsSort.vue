@@ -3,7 +3,7 @@
     ref="enlargeDialog"
     destroy-on-close
     :append-to-body="true"
-    :title="'自定义排序'"
+    :title="t('visualization.custom_sort')"
     v-model="dialogShow"
     width="30vw"
     top="10vh"
@@ -34,43 +34,37 @@
 <script setup lang="ts">
 import drag from '@/assets/svg/drag.svg'
 import draggable from 'vuedraggable'
-import { onMounted, ref, toRefs } from 'vue'
+import { ref } from 'vue'
 import { deepCopy } from '@/utils/utils'
 import { ElButton } from 'element-plus-secondary'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
 import eventBus from '@/utils/eventBus'
 const snapshotStore = snapshotStoreWithOut()
-const props = defineProps({
-  element: {
-    type: Object,
-    required: true
-  }
-})
 
-onMounted(() => {
-  init()
-})
-const { element } = toRefs(props)
+const config = ref(null)
 
 const sortList = ref([])
 const dialogShow = ref(false)
-const sortInit = () => {
-  init()
+const sortInit = component => {
+  init(component)
   dialogShow.value = true
 }
-const init = () => {
-  sortList.value = deepCopy(element.value.propValue)
+const init = component => {
+  config.value = component
+  sortList.value = deepCopy(config.value.propValue)
 }
 
 const closeDialog = () => {
   dialogShow.value = false
 }
 const save = () => {
-  element.value.propValue = deepCopy(sortList.value)
+  config.value.propValue = deepCopy(sortList.value)
   snapshotStore.recordSnapshotCache()
-  eventBus.emit('onTabSortChange-' + element.value.id)
+  eventBus.emit('onTabSortChange-' + config.value.id)
   closeDialog()
 }
+import { useI18n } from '@/hooks/web/useI18n'
+const { t } = useI18n()
 
 defineExpose({
   sortInit

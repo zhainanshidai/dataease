@@ -39,8 +39,8 @@ const emit = defineEmits(['onMiscChange'])
 watch(
   () => props.chart,
   () => {
-    initField()
     init()
+    initField()
   },
   { deep: true }
 )
@@ -337,7 +337,7 @@ const changeMaxValidate = prop => {
       state.miscForm.liquidMax = cloneDeep(defaultMaxValue.liquidMax)
     }
   }
-  changeMisc(prop)
+  changeMisc(prop, true)
 }
 const addAxis = (form: AxisEditForm) => {
   const maxTypeKey = props.chart.type === 'liquid' ? 'liquidMaxType' : 'gaugeMaxType'
@@ -357,8 +357,8 @@ const addAxis = (form: AxisEditForm) => {
   }
 }
 onMounted(() => {
-  initField()
   init()
+  initField()
   useEmitt({ name: 'addAxis', callback: addAxis })
 })
 </script>
@@ -528,7 +528,7 @@ onMounted(() => {
           v-model="state.miscForm.gaugeMax"
           size="small"
           controls-position="right"
-          @blur="changeMaxValidate('gaugeMax')"
+          @change="changeMaxValidate('gaugeMax')"
         />
       </el-form-item>
       <el-row

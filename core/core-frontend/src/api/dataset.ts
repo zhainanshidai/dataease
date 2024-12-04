@@ -120,13 +120,12 @@ export const delDatasetTree = async (id): Promise<IResponse> => {
   })
 }
 
-export const exportDatasetData = async (data): Promise<IResponse> => {
+export const exportDatasetData = (data = {}) => {
   return request.post({
     url: '/datasetTree/exportDataset',
     method: 'post',
     data: data,
-    loading: true,
-    responseType: 'blob'
+    loading: true
   })
 }
 

@@ -60,6 +60,7 @@ const handleClose = () => {
   clearInterval(timer)
 }
 const { wsCache } = useCache()
+const openType = wsCache.get('open-backend') === '1' ? '_self' : '_blank'
 const xpack = wsCache.get('xpack-model-distributed')
 
 onUnmounted(() => {
@@ -242,12 +243,12 @@ const callbackExportSuc = () => {
 const downLoadAll = () => {
   if (multipleSelection.value.length === 0) {
     tableData.value.forEach(item => {
-      window.open(PATH_URL + '/exportCenter/download/' + item.id)
+      window.open(PATH_URL + '/exportCenter/download/' + item.id, openType)
     })
     return
   }
   multipleSelection.value.map(ele => {
-    window.open(PATH_URL + '/exportCenter/download/' + ele.id)
+    window.open(PATH_URL + '/exportCenter/download/' + ele.id, openType)
   })
 }
 const showMsg = item => {
@@ -263,7 +264,7 @@ const timestampFormatDate = value => {
 }
 import { PATH_URL } from '@/config/axios/service'
 const downloadClick = item => {
-  window.open(PATH_URL + '/exportCenter/download/' + item.id)
+  window.open(PATH_URL + '/exportCenter/download/' + item.id, openType)
 }
 
 const retry = item => {

@@ -10,36 +10,98 @@ import board_9 from '@/assets/svg/board_9.svg'
 import graphicalCircular from '@/assets/svg/graphical-circular.svg'
 import graphicalRect from '@/assets/svg/graphical-rect.svg'
 import graphicalTriangle from '@/assets/svg/graphical-triangle.svg'
+import { useI18n } from '@/hooks/web/useI18n'
+const { t } = useI18n()
 export const CANVAS_MATERIAL = [
   {
     category: 'CanvasBoard',
-    title: '边框',
+    title: t('visualization.board'),
     span: 8,
     details: [
-      { value: 'board_1', type: 'outer_svg', title: '边框1', icon: board_1 },
-      { value: 'board_2', type: 'outer_svg', title: '边框2', icon: board_2 },
-      { value: 'board_3', type: 'outer_svg', title: '边框3', icon: board_3 },
-      { value: 'board_4', type: 'outer_svg', title: '边框4', icon: board_4 },
-      { value: 'board_5', type: 'outer_svg', title: '边框5', icon: board_5 },
-      { value: 'board_6', type: 'outer_svg', title: '边框6', icon: board_6 },
-      { value: 'board_7', type: 'outer_svg', title: '边框7', icon: board_7 },
-      { value: 'board_8', type: 'outer_svg', title: '边框8', icon: board_8 },
-      { value: 'board_9', type: 'outer_svg', title: '边框9', icon: board_9 }
+      {
+        value: 'board_1',
+        type: 'outer_svg',
+        title: t('visualization.board_name', [1]),
+        icon: board_1
+      },
+      {
+        value: 'board_2',
+        type: 'outer_svg',
+        title: t('visualization.board_name', [2]),
+        icon: board_2
+      },
+      {
+        value: 'board_3',
+        type: 'outer_svg',
+        title: t('visualization.board_name', [3]),
+        icon: board_3
+      },
+      {
+        value: 'board_4',
+        type: 'outer_svg',
+        title: t('visualization.board_name', [4]),
+        icon: board_4
+      },
+      {
+        value: 'board_5',
+        type: 'outer_svg',
+        title: t('visualization.board_name', [5]),
+        icon: board_5
+      },
+      {
+        value: 'board_6',
+        type: 'outer_svg',
+        title: t('visualization.board_name', [6]),
+        icon: board_6
+      },
+      {
+        value: 'board_7',
+        type: 'outer_svg',
+        title: t('visualization.board_name', [7]),
+        icon: board_7
+      },
+      {
+        value: 'board_8',
+        type: 'outer_svg',
+        title: t('visualization.board_name', [8]),
+        icon: board_8
+      },
+      {
+        value: 'board_9',
+        type: 'outer_svg',
+        title: t('visualization.board_name', [9]),
+        icon: board_9
+      }
     ]
   },
   {
     category: 'DeGraphical',
-    title: '图形',
+    title: t('visualization.graphic'),
     span: 8,
     details: [
-      { value: 'RectShape', type: 'graphical', title: '矩形', icon: graphicalRect },
-      { value: 'SvgTriangle', type: 'graphical', title: '三角形', icon: graphicalTriangle },
-      { value: 'CircleShape', type: 'graphical', title: '圆形', icon: graphicalCircular }
+      {
+        value: 'RectShape',
+        type: 'graphical',
+        title: t('visualization.rect_shape'),
+        icon: graphicalRect
+      },
+      {
+        value: 'SvgTriangle',
+        type: 'graphical',
+        title: t('visualization.triangle'),
+        icon: graphicalTriangle
+      },
+      {
+        value: 'CircleShape',
+        type: 'graphical',
+        title: t('visualization.circle_shape'),
+        icon: graphicalCircular
+      }
     ]
   },
   {
     category: 'CanvasIcon',
-    title: '图标',
+    title: t('visualization.icon'),
     span: 4,
     details: [
       { value: 'Plus', type: 'inner_svg', icon: 'Plus' },

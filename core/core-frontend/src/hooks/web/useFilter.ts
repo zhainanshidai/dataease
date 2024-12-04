@@ -254,6 +254,7 @@ export const searchQuery = (queryComponentList, filter, curComponentId, firstLoa
         if (item.checkedFields.includes(curComponentId) && item.checkedFieldsMap[curComponentId]) {
           let selectValue
           const {
+            id,
             selectValue: value,
             timeGranularityMultiple,
             defaultNumValueEnd,
@@ -471,6 +472,7 @@ export const searchQuery = (queryComponentList, filter, curComponentId, firstLoa
               }
 
               filter.push({
+                filterId: id,
                 componentId: ele.id,
                 fieldId,
                 operator,

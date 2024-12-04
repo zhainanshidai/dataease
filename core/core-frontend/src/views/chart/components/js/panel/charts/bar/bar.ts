@@ -132,10 +132,22 @@ export class Bar extends G2PlotChartView<ColumnOptions, Column> {
             textAlign: 'start',
             textBaseline: 'top',
             fontSize: labelCfg.fontSize,
+            fontFamily: chart.fontFamily,
             fill: labelCfg.color
           }
         })
         return group
+      },
+      position: data => {
+        if (data.value < 0) {
+          if (tmpOptions.label?.position === 'top') {
+            return 'bottom'
+          }
+          if (tmpOptions.label?.position === 'bottom') {
+            return 'top'
+          }
+        }
+        return tmpOptions.label?.position
       }
     }
     return {
@@ -362,6 +374,7 @@ export class StackBar extends Bar {
     return flow(
       this.configTheme,
       this.configEmptyDataStrategy,
+      this.configData,
       this.configColor,
       this.configBasicStyle,
       this.configLabel,
@@ -370,8 +383,7 @@ export class StackBar extends Bar {
       this.configXAxis,
       this.configYAxis,
       this.configSlider,
-      this.configAnalyse,
-      this.configData
+      this.configAnalyse
     )(chart, options, {}, this)
   }
 

@@ -1,12 +1,13 @@
 import type { RadarOptions, Radar as G2Radar } from '@antv/g2plot/esm/plots/radar'
 import { G2PlotChartView, G2PlotDrawOptions } from '../../types/impl/g2plot'
 import { flow, parseJson } from '../../../util'
-import { configPlotTooltipEvent, getPadding } from '../../common/common_antv'
+import { configPlotTooltipEvent } from '../../common/common_antv'
 import { valueFormatter } from '../../../formatter'
 import type { Datum } from '@antv/g2plot/esm/types/common'
 import { useI18n } from '@/hooks/web/useI18n'
-import { DEFAULT_LABEL } from '@/views/chart/components/editor/util/chart'
+import { DEFAULT_LABEL, DEFAULT_LEGEND_STYLE } from '@/views/chart/components/editor/util/chart'
 import { Group } from '@antv/g-canvas'
+import { defaults } from 'lodash-es'
 
 const { t } = useI18n()
 
@@ -24,7 +25,15 @@ export class Radar extends G2PlotChartView<RadarOptions, G2Radar> {
     'linkage'
   ]
   propertyInner: EditorPropertyInner = {
-    'basic-style-selector': ['colors', 'alpha', 'radarShape', 'seriesColor'],
+    'basic-style-selector': [
+      'colors',
+      'alpha',
+      'radarShape',
+      'seriesColor',
+      'radarShowPoint',
+      'radarPointSize',
+      'radarAreaColor'
+    ],
     'label-selector': ['seriesLabelFormatter'],
     'tooltip-selector': ['color', 'fontSize', 'backgroundColor', 'seriesTooltipFormatter', 'show'],
     'misc-style-selector': ['showName', 'color', 'fontSize', 'axisColor', 'axisValue'],
@@ -73,13 +82,6 @@ export class Radar extends G2PlotChartView<RadarOptions, G2Radar> {
       yField: 'value',
       seriesField: 'category',
       appendPadding: [10, 10, 10, 10],
-      point: {
-        size: 4,
-        shape: 'circle',
-        style: {
-          fill: null
-        }
-      },
       interactions: [
         {
           type: 'legend-active',
@@ -119,6 +121,22 @@ export class Radar extends G2PlotChartView<RadarOptions, G2Radar> {
     newChart.on('point:click', action)
     configPlotTooltipEvent(chart, newChart)
     return newChart
+  }
+
+  protected configBasicStyle(chart: Chart, options: RadarOptions): RadarOptions {
+    const { radarShowPoint, radarPointSize, radarAreaColor } = parseJson(
+      chart.customAttr
+    ).basicStyle
+    const tempOptions: RadarOptions = {}
+
+    if (radarShowPoint) {
+      tempOptions['point'] = { shape: 'circle', size: radarPointSize, style: { fill: null } }
+    }
+    if (radarAreaColor) {
+      tempOptions['area'] = {}
+    }
+
+    return { ...options, ...tempOptions }
   }
 
   protected configLabel(chart: Chart, options: RadarOptions): RadarOptions {
@@ -242,9 +260,16 @@ export class Radar extends G2PlotChartView<RadarOptions, G2Radar> {
     if (!optionTmp.legend) {
       return optionTmp
     }
+    const customStyle = parseJson(chart.customStyle)
+    let size
+    if (customStyle && customStyle.legend) {
+      size = defaults(JSON.parse(JSON.stringify(customStyle.legend)), DEFAULT_LEGEND_STYLE).size
+    } else {
+      size = DEFAULT_LEGEND_STYLE.size
+    }
     optionTmp.legend.marker.style = style => {
       return {
-        r: 4,
+        r: size,
         fill: style.stroke
       }
     }
@@ -258,7 +283,8 @@ export class Radar extends G2PlotChartView<RadarOptions, G2Radar> {
       this.configLabel,
       this.configLegend,
       this.configMultiSeriesTooltip,
-      this.configAxis
+      this.configAxis,
+      this.configBasicStyle
     )(chart, options)
   }
 

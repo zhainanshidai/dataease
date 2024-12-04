@@ -25,6 +25,8 @@ import { get, set } from 'lodash-es'
 import { viewFieldTimeTrans } from '@/utils/viewUtils'
 import { useAppearanceStoreWithOut } from '@/store/modules/appearance'
 import { ElMessage } from 'element-plus-secondary'
+import { useI18n } from '@/hooks/web/useI18n'
+const { t } = useI18n()
 
 export const dvMainStore = defineStore('dataVisualization', {
   state: () => {
@@ -59,6 +61,7 @@ export const dvMainStore = defineStore('dataVisualization', {
       isInEditor: false, // 是否在编辑器中，用于判断复制、粘贴组件时是否生效，如果在编辑器外，则无视这些操作
       componentData: [], // 画布组件数据
       curComponent: null,
+      curTabName: null, // 当前选中的tabName 大屏图层区域使用
       curComponentIndex: null,
       curCanvasScaleMap: {},
       // 预览仪表板缩放信息
@@ -264,7 +267,11 @@ export const dvMainStore = defineStore('dataVisualization', {
     setCurComponentMobileConfig(component) {
       this.curComponent = component
     },
+    setCurTabName(val) {
+      this.curTabName = val
+    },
     setCurComponent({ component, index }) {
+      this.setCurTabName(null)
       if (!component && this.curComponent) {
         this.curComponent['editing'] = false
         this.curComponent['resizing'] = false
@@ -467,7 +474,7 @@ export const dvMainStore = defineStore('dataVisualization', {
         const newView = {
           ...JSON.parse(JSON.stringify(BASE_VIEW_CONFIG)),
           id: component.id,
-          title: '查询组件',
+          title: t('visualization.query_component'),
           type: component.innerType,
           customStyle: {
             component: {
@@ -636,7 +643,11 @@ export const dvMainStore = defineStore('dataVisualization', {
       if (this.batchOptComponentType !== 'UserView') {
         this.batchOptComponentInfo = {
           collapseName: 'background',
-          commonBackground: deepCopy(COMMON_COMPONENT_BACKGROUND_BASE),
+          commonBackground: deepCopy(
+            this.curOriginThemes === 'light'
+              ? COMMON_COMPONENT_BACKGROUND_LIGHT
+              : COMMON_COMPONENT_BACKGROUND_DARK
+          ),
           style: {}
         }
 
@@ -671,7 +682,11 @@ export const dvMainStore = defineStore('dataVisualization', {
         } else {
           this.batchOptComponentInfo = {
             collapseName: 'background',
-            commonBackground: deepCopy(COMMON_COMPONENT_BACKGROUND_BASE),
+            commonBackground: deepCopy(
+              this.curOriginThemes === 'light'
+                ? COMMON_COMPONENT_BACKGROUND_LIGHT
+                : COMMON_COMPONENT_BACKGROUND_DARK
+            ),
             style: {}
           }
           this.mixPropertiesInner['common-style']?.forEach(styleKey => {
@@ -1343,7 +1358,8 @@ export const dvMainStore = defineStore('dataVisualization', {
         selfWatermarkStatus: null,
         watermarkInfo: {},
         type: null,
-        mobileLayout: false
+        mobileLayout: false,
+        contentId: 0
       }
       this.mainScrollTop = 0
     },
@@ -1391,12 +1407,15 @@ export const dvMainStore = defineStore('dataVisualization', {
     getViewDetails(viewId) {
       return this.canvasViewInfo[viewId]
     },
-    updateDvInfoId(newId) {
+    updateDvInfoId(newId, contentId?) {
       if (this.dvInfo) {
         this.dvInfo.dataState = 'ready'
         this.dvInfo.optType = null
         if (newId) {
           this.dvInfo.id = newId
+        }
+        if (contentId) {
+          this.dvInfo.contentId = contentId
         }
       }
     },
@@ -1413,7 +1432,8 @@ export const dvMainStore = defineStore('dataVisualization', {
       }
     },
     createInit(dvType, resourceId?, pid?, watermarkInfo?, preName) {
-      const optName = dvType === 'dashboard' ? '新建仪表板' : '新建数据大屏'
+      const optName =
+        dvType === 'dashboard' ? t('visualization.new_dashboard') : t('visualization.new_screen')
       const name = preName ? preName : optName
       this.dvInfo = {
         dataState: 'prepare',
@@ -1425,7 +1445,8 @@ export const dvMainStore = defineStore('dataVisualization', {
         status: 1,
         selfWatermarkStatus: true,
         watermarkInfo: watermarkInfo,
-        mobileLayout: false
+        mobileLayout: false,
+        contentId: '0'
       }
       const canvasStyleDataNew =
         dvType === 'dashboard'
@@ -1467,7 +1488,8 @@ export const dvMainStore = defineStore('dataVisualization', {
         selfWatermarkStatus: null,
         watermarkInfo: {},
         type: null,
-        mobileLayout: false
+        mobileLayout: false,
+        contentId: '0'
       }
       this.canvasStyleData = { ...deepCopy(DEFAULT_CANVAS_STYLE_DATA_DARK), backgroundColor: null }
     },

@@ -7,15 +7,18 @@ import { downloadCanvas2, imgUrlTrans } from '@/utils/imgUtils'
 import ComponentEditBar from '@/components/visualization/ComponentEditBar.vue'
 import ComponentSelector from '@/components/visualization/ComponentSelector.vue'
 import { useEmitt } from '@/hooks/web/useEmitt'
+import { useCache } from '@/hooks/web/useCache'
 import Board from '@/components/de-board/Board.vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { activeWatermarkCheckUser, removeActiveWatermark } from '@/components/watermark/watermark'
+import { isMobile } from '@/utils/utils'
+import { isDashboard } from '@/utils/canvasUtils'
 
 const componentWrapperInnerRef = ref(null)
 const componentEditBarRef = ref(null)
 const dvMainStore = dvMainStoreWithOut()
 const downLoading = ref(false)
-
+const { wsCache } = useCache('localStorage')
 const commonFilterAttrs = ['width', 'height', 'top', 'left', 'rotate']
 const commonFilterAttrsFilterBorder = [
   'width',
@@ -106,6 +109,12 @@ const props = defineProps({
     type: String,
     required: false,
     default: 'common'
+  },
+  // 字体
+  fontFamily: {
+    type: String,
+    required: false,
+    default: 'inherit'
   }
 })
 const {
@@ -195,6 +204,8 @@ const onMouseEnter = () => {
 const componentBackgroundStyle = computed(() => {
   if (config.value.commonBackground) {
     const {
+      backdropFilterEnable,
+      backdropFilter,
       backgroundColorSelect,
       backgroundColor,
       backgroundImageEnable,
@@ -203,13 +214,26 @@ const componentBackgroundStyle = computed(() => {
       innerPadding,
       borderRadius
     } = config.value.commonBackground
-    const style = {
+    let style = {
       padding: innerPadding * deepScale.value + 'px',
       borderRadius: borderRadius + 'px'
     }
     let colorRGBA = ''
     if (backgroundColorSelect && backgroundColor) {
       colorRGBA = backgroundColor
+    }
+    if (config.value.innerType === 'VQuery') {
+      if (backgroundColorSelect) {
+        style = {
+          padding: innerPadding * deepScale.value + 'px',
+          borderRadius: borderRadius + 'px'
+        }
+      } else {
+        style = {
+          padding: 12 * deepScale.value + 'px',
+          borderRadius: '0'
+        }
+      }
     }
     if (config.value.innerType === 'VQuery' && backgroundColorSelect) {
       if (backgroundType === 'outerImage' && typeof outerImage === 'string') {
@@ -228,6 +252,9 @@ const componentBackgroundStyle = computed(() => {
     }
     if (config.value.component !== 'UserView') {
       style['overflow'] = 'hidden'
+    }
+    if (backdropFilterEnable) {
+      style['backdrop-filter'] = 'blur(' + backdropFilter + 'px)'
     }
     return style
   }
@@ -287,11 +314,12 @@ const eventEnable = computed(
     ) ||
       ['indicator', 'rich-text'].includes(config.value.innerType)) &&
     config.value.events &&
-    config.value.events.checked
+    config.value.events.checked &&
+    (isDashboard() || (!isDashboard() && !isMobile()))
 )
 
 const onWrapperClick = e => {
-  if (eventEnable.value) {
+  if (eventEnable.value && showPosition.value !== 'canvas-multiplexing') {
     if (config.value.events.type === 'showHidden') {
       // 打开弹框区域
       nextTick(() => {
@@ -404,6 +432,7 @@ const showActive = computed(() => props.popActive || (dvMainStore.mobileInPc && 
           :disabled="true"
           :is-edit="false"
           :suffix-id="suffixId"
+          :font-family="fontFamily"
           @onPointClick="onPointClick"
         />
       </div>

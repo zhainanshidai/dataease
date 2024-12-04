@@ -79,14 +79,14 @@ defineExpose({
 })
 
 const beforeAvatarUpload = rawFile => {
-  if (!rawFile.name.endsWith('.ttf')) {
+  if (!rawFile.name.toLocaleLowerCase().endsWith('.ttf')) {
     ElMessage.error(t('system.in_ttf_format'))
     return false
   }
   return true
 }
 const onChange = file => {
-  if (file.raw?.name.endsWith('.ttf')) {
+  if (file.raw?.name?.toLocaleLowerCase().endsWith('.ttf')) {
     state.fileList = file
   }
 }

@@ -89,6 +89,19 @@ const backgroundCustomShow = computed(() => {
       !['CanvasBoard', 'CanvasIcon', 'CircleShape', 'RectShape'].includes(element.value.component))
   )
 })
+const tabTitleShow = computed(() => {
+  return element.value && element.value.style && element.value.component === 'DeTabs'
+})
+
+const styleShow = computed(() => {
+  return (
+    element.value &&
+    element.value.style &&
+    element.value.component !== 'DeTabs' &&
+    Object.keys(element.value.style).length > 0
+  )
+})
+
 onMounted(() => {
   const erd = elementResizeDetectorMaker()
   containerWidth.value = containerRef.value?.offsetWidth
@@ -103,12 +116,17 @@ onMounted(() => {
 <template>
   <div class="v-common-attr" ref="containerRef">
     <el-collapse v-model="activeName" @change="onChange()">
-      <el-collapse-item :effect="themes" title="位置" name="position" v-if="positionComponentShow">
+      <el-collapse-item
+        :effect="themes"
+        :title="t('visualization.position')"
+        name="position"
+        v-if="positionComponentShow"
+      >
         <component-position :themes="themes" />
       </el-collapse-item>
       <el-collapse-item
         :effect="themes"
-        title="背景"
+        :title="t('visualization.background')"
         name="background"
         v-if="element && backgroundCustomShow"
       >
@@ -122,10 +140,25 @@ onMounted(() => {
         />
       </el-collapse-item>
       <slot></slot>
+      <collapse-switch-item
+        v-if="tabTitleShow"
+        v-model="element.style.showTabTitle"
+        @modelChange="val => onStyleAttrChange({ key: 'showTabTitle', value: val })"
+        :themes="themes"
+        :title="t('visualization.tab_title')"
+        name="tabTitle"
+        class="common-style-area"
+      >
+        <common-style-set
+          @onStyleAttrChange="onStyleAttrChange"
+          :themes="themes"
+          :element="element"
+        ></common-style-set>
+      </collapse-switch-item>
       <el-collapse-item
-        v-if="element && element.style"
+        v-if="styleShow"
         :effect="themes"
-        title="样式"
+        :title="t('visualization.style')"
         name="style"
         class="common-style-area"
       >
@@ -138,7 +171,7 @@ onMounted(() => {
       <el-collapse-item
         v-if="element && element.events && eventsShow"
         :effect="themes"
-        title="事件"
+        :title="t('visualization.event')"
         name="events"
         class="common-style-area"
       >
@@ -149,7 +182,7 @@ onMounted(() => {
         v-model="element.style.borderActive"
         @modelChange="val => onStyleAttrChange({ key: 'borderActive', value: val })"
         :themes="themes"
-        title="边框"
+        :title="t('visualization.board')"
         name="borderSetting"
         class="common-style-area"
       >

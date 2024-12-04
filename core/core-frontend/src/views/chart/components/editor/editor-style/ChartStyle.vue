@@ -28,6 +28,8 @@ import FlowMapLineSelector from '@/views/chart/components/editor/editor-style/co
 import FlowMapPointSelector from '@/views/chart/components/editor/editor-style/components/FlowMapPointSelector.vue'
 import CommonEvent from '@/custom-component/common/CommonEvent.vue'
 import CommonBorderSetting from '@/custom-component/common/CommonBorderSetting.vue'
+import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
+const snapshotStore = snapshotStoreWithOut()
 
 const dvMainStore = dvMainStoreWithOut()
 const { dvInfo, batchOptStatus, mobileInPc } = storeToRefs(dvMainStore)
@@ -202,10 +204,12 @@ const onBasicStyleChange = (val, prop) => {
 }
 
 const onBackgroundChange = (val, prop) => {
+  snapshotStore.recordSnapshotCache()
   state.initReady && emit('onBackgroundChange', val, prop)
 }
 
 const onActiveChange = val => {
+  snapshotStore.recordSnapshotCache()
   state.initReady &&
     emit('onStyleAttrChange', {
       custom: 'style',
@@ -263,7 +267,7 @@ watch(
           <el-collapse-item
             :effect="themes"
             name="position"
-            :title="'位置'"
+            :title="t('visualization.position')"
             v-if="positionComponentShow"
           >
             <component-position :themes="themes" />
@@ -334,7 +338,7 @@ watch(
           <el-collapse-item
             :effect="themes"
             name="background"
-            title="背景"
+            :title="t('visualization.background')"
             v-if="showProperties('background-overall-component') && commonBackgroundPop"
           >
             <background-overall-common
@@ -349,7 +353,7 @@ watch(
             v-model="commonBorderPop.borderActive"
             @modelChange="val => onActiveChange(val)"
             :themes="themes"
-            :title="'边框'"
+            :title="t('visualization.board')"
             name="borderSetting"
             class="common-style-area"
           >
@@ -359,7 +363,12 @@ watch(
               @onStyleAttrChange="onStyleAttrChange"
             ></common-border-setting>
           </collapse-switch-item>
-          <el-collapse-item :effect="themes" name="events" title="事件" v-if="eventsShow">
+          <el-collapse-item
+            :effect="themes"
+            name="events"
+            :title="t('visualization.event')"
+            v-if="eventsShow"
+          >
             <common-event :themes="themes" :events-info="eventInfo"></common-event>
           </el-collapse-item>
           <el-collapse-item
@@ -384,7 +393,7 @@ watch(
             v-if="showProperties('indicator-name-selector')"
             :change-model="chart.customAttr.indicatorName"
             @modelChange="val => onIndicatorNameChange(val, 'show')"
-            title="指标名称"
+            :title="t('visualization.indicator_name')"
             name="indicator-name"
           >
             <indicator-name-selector
@@ -401,7 +410,7 @@ watch(
             :effect="themes"
             v-if="showProperties('misc-selector') && !chart.type.includes('mix')"
             name="size"
-            title="大小"
+            :title="t('visualization.component_size')"
           >
             <misc-selector
               :property-inner="propertyInnerAll['misc-selector']"
@@ -545,7 +554,7 @@ watch(
           <el-collapse-item
             :effect="themes"
             name="flowMapPointSelector"
-            title="标注"
+            :title="t('visualization.component_annotation')"
             v-if="showProperties('flow-map-point-selector')"
           >
             <flow-map-point-selector

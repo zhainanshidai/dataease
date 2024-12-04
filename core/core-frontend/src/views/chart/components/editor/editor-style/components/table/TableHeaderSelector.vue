@@ -48,6 +48,12 @@ const fontSizeList = computed(() => {
       value: i
     })
   }
+  for (let i = 50; i <= 200; i = i + 10) {
+    arr.push({
+      name: i + '',
+      value: i
+    })
+  }
   return arr
 })
 
@@ -275,7 +281,7 @@ onMounted(() => {
             controls-position="right"
             v-model="state.tableHeaderForm.tableTitleHeight"
             :min="20"
-            :max="100"
+            :max="1000"
             @change="changeTableHeader('tableTitleHeight')"
           />
         </el-form-item>

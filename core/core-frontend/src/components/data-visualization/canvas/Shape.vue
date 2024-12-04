@@ -131,7 +131,12 @@ import Icon from '@/components/icon-custom/src/Icon.vue'
 import ComponentEditBar from '@/components/visualization/ComponentEditBar.vue'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import ComposeShow from '@/components/data-visualization/canvas/ComposeShow.vue'
-import { groupSizeStyleAdaptor, groupStyleRevert } from '@/utils/style'
+import {
+  groupSizeStyleAdaptor,
+  groupStyleRevert,
+  groupStyleRevertBatch,
+  tabInnerStyleRevert
+} from '@/utils/style'
 import { isDashboard, isGroupCanvas, isMainCanvas, isTabCanvas } from '@/utils/canvasUtils'
 import Board from '@/components/de-board/Board.vue'
 import { activeWatermarkCheckUser, removeActiveWatermark } from '@/components/watermark/watermark'
@@ -772,9 +777,13 @@ const handleMouseDownOnPoint = (point, e) => {
     dashboardActive.value && emit('onResizing', moveEvent)
     element.value['resizing'] = true
     //如果当前组件是Group分组或者Tab 则要进行内部组件深度计算
-    if (['DeTabs', 'Group'].includes(element.value.component)) {
+    if (
+      ['Group'].includes(element.value.component) ||
+      (['DeTabs'].includes(element.value.component) && !element.value.resizeInnerKeep)
+    ) {
       groupSizeStyleAdaptor(element.value)
     }
+
     //如果当前画布是Group内部画布 则对应组件定位在resize时要还原到groupStyle中
     if (isGroupCanvas(canvasId.value) || isTabCanvas(canvasId.value)) {
       groupStyleRevert(element.value, {
@@ -785,6 +794,12 @@ const handleMouseDownOnPoint = (point, e) => {
   }
 
   const up = () => {
+    // 如果内部组件保持尺寸时，这里在鼠标抬起时，重新计算一下内部组件占比
+    if (['DeTabs'].includes(element.value.component) && element.value.resizeInnerKeep) {
+      console.log('===test3==')
+      tabInnerStyleRevert(element.value)
+    }
+
     dashboardActive.value && emit('onMouseUp')
     element.value['resizing'] = false
     document.removeEventListener('mousemove', move)
@@ -877,6 +892,8 @@ const padding3D = computed(() => {
 const componentBackgroundStyle = computed(() => {
   if (element.value.commonBackground && element.value.component !== 'GroupArea') {
     const {
+      backdropFilterEnable,
+      backdropFilter,
       backgroundColorSelect,
       backgroundColor,
       backgroundImageEnable,
@@ -886,13 +903,27 @@ const componentBackgroundStyle = computed(() => {
       borderRadius
     } = element.value.commonBackground
     const innerPaddingTarget = ['Group'].includes(element.value.component) ? 0 : innerPadding
-    const style = {
+    let style = {
       padding: innerPaddingTarget * scale.value + 'px',
       borderRadius: borderRadius + 'px'
     }
     let colorRGBA = ''
     if (backgroundColorSelect && backgroundColor) {
       colorRGBA = backgroundColor
+    }
+
+    if (element.value.innerType === 'VQuery') {
+      if (backgroundColorSelect) {
+        style = {
+          padding: innerPadding * scale.value + 'px',
+          borderRadius: borderRadius + 'px'
+        }
+      } else {
+        style = {
+          padding: 12 * scale.value + 'px',
+          borderRadius: '0'
+        }
+      }
     }
 
     if (element.value.innerType === 'VQuery' && backgroundColorSelect) {
@@ -912,6 +943,9 @@ const componentBackgroundStyle = computed(() => {
     }
     if (element.value.component !== 'UserView') {
       style['overflow'] = 'hidden'
+    }
+    if (backdropFilterEnable) {
+      style['backdrop-filter'] = 'blur(' + backdropFilter + 'px)'
     }
     return style
   }
@@ -959,6 +993,7 @@ const tabMoveInCheck = async () => {
     for (const item of nodes) {
       if (
         item.className !== undefined &&
+        typeof item.className === 'string' &&
         item.className.split(' ').includes('shape') &&
         item.getAttribute('component-id') !== domId.value && // 去掉当前
         item.getAttribute('tab-is-check') !== null &&

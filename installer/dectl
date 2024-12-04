@@ -371,6 +371,7 @@ function restore() {
          mkdir -p $DE_RUNNING_BASE
       fi
       echo "恢复备份 $target"
+      rm -rf $DE_RUNNING_BASE/data/mysql/*
       tar -zxf $target --directory=$DE_RUNNING_BASE
       service dataease start
    else

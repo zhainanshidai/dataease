@@ -40,7 +40,7 @@ const router = useRouter()
 const resourceCreateOpt = ref(null)
 const embeddedStore = useEmbedded()
 const appStore = useAppStoreWithOut()
-
+const openType = wsCache.get('open-backend') === '1' ? '_self' : '_blank'
 const quickCreationList = shallowRef([
   {
     icon: icon_dashboard_outlined,
@@ -192,24 +192,25 @@ const quickCreate = (flag: number, hasAuth: boolean) => {
       break
   }
 }
+
 const createPanel = () => {
   const baseUrl = '#/dashboard?opt=create'
-  window.open(baseUrl, '_blank')
+  window.open(baseUrl, openType)
 }
 
 const createScreen = () => {
   const baseUrl = '#/dvCanvas?opt=create'
-  window.open(baseUrl, '_blank')
+  window.open(baseUrl, openType)
 }
 const createDataset = () => {
   let routeData = router.resolve({
     path: '/dataset-form'
   })
-  window.open(routeData.href, '_blank')
+  window.open(routeData.href, openType)
 }
 const createDatasource = () => {
   const baseUrl = '#/data/datasource?opt=create'
-  window.open(baseUrl, '_blank')
+  window.open(baseUrl, openType)
 }
 
 const templatePreview = previewId => {
@@ -255,9 +256,9 @@ const apply = () => {
     embeddedBaseUrl = embeddedStore.baseUrl
   }
   if (state.pid) {
-    newWindow = window.open(embeddedBaseUrl + baseUrl + `&pid=${state.pid}`, '_blank')
+    newWindow = window.open(embeddedBaseUrl + baseUrl + `&pid=${state.pid}`, openType)
   } else {
-    newWindow = window.open(embeddedBaseUrl + baseUrl, '_blank')
+    newWindow = window.open(embeddedBaseUrl + baseUrl, openType)
   }
   initOpenHandler(newWindow)
 }
@@ -568,8 +569,8 @@ loadShareBase()
         justify-content: space-between;
         flex-wrap: wrap;
         .item {
-          padding: 16px;
-          width: 148px;
+          padding: 12px;
+          width: 150px;
           margin-top: 16px;
           border-radius: 4px;
           border: 1px solid #dee0e3;

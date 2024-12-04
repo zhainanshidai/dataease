@@ -96,6 +96,7 @@ const onSubmit = async () => {
       const { token, exp } = res.data
       userStore.setToken(token)
       userStore.setExp(exp)
+      userStore.setTime(Date.now())
       router.push({ path: '/index' })
     })
     .catch(() => {

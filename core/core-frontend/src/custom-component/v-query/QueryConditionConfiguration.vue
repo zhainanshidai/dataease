@@ -23,6 +23,8 @@ import {
   unref
 } from 'vue'
 import { storeToRefs } from 'pinia'
+import { enumValueObj } from '@/api/dataset'
+import CustomSortFilter from './CustomSortFilter.vue'
 import { addQueryCriteriaConfig } from './options'
 import { getCustomTime } from './time-format'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
@@ -271,6 +273,9 @@ const showTypeError = computed(() => {
       return false
     }
     if (displayTypeField?.deType === field?.deType && displayTypeField?.deType === 1) {
+      if (!Array.isArray(field.type) || !Array.isArray(displayTypeField.type)) {
+        return false
+      }
       if (!displayTypeField.type?.length && !field.type?.length) {
         return false
       }
@@ -684,13 +689,13 @@ const setParameters = field => {
     Object.values(field?.fields || {})
       .flat()
       .filter(ele => fieldArr.includes(ele.id) && !!ele.variableName)
+      .concat(curComponent.value.parameters.filter(ele => fieldArr.includes(ele.id)))
   )
   nextTick(() => {
     if (isTimeParameter.value) {
+      const timeParameter = curComponent.value.parameters.find(ele => ele.deType === 1)
       curComponent.value.timeGranularity =
-        typeTimeMap[
-          curComponent.value.parameters[0].type[1] || curComponent.value.parameters[0].type[0]
-        ]
+        typeTimeMap[timeParameter.type[1] || timeParameter.type[0]]
       curComponent.value.displayType = '1'
     }
 
@@ -1155,6 +1160,8 @@ const validate = () => {
     }
 
     if (ele.displayType === '22' && ele.defaultValueCheck) {
+      ele.numValueEnd = ele.defaultNumValueEnd
+      ele.numValueStart = ele.defaultNumValueStart
       if (
         (ele.defaultNumValueEnd !== 0 && !ele.defaultNumValueEnd) ||
         (ele.defaultNumValueStart !== 0 && !ele.defaultNumValueStart)
@@ -1167,7 +1174,7 @@ const validate = () => {
         !isNaN(ele.defaultNumValueStart) &&
         ele.defaultNumValueEnd < ele.defaultNumValueStart
       ) {
-        ElMessage.error('数值区间最大值必须大于最小值')
+        ElMessage.error(t('v_query.the_minimum_value'))
         return true
       }
     }
@@ -1246,6 +1253,9 @@ const validate = () => {
           return false
         }
         if (displayTypeField?.deType === field?.deType && displayTypeField?.deType === 1) {
+          if (!Array.isArray(field.type) || !Array.isArray(displayTypeField.type)) {
+            return false
+          }
           if (!displayTypeField.type?.length && !field.type?.length) {
             return false
           }
@@ -1747,6 +1757,39 @@ const getOptions = (id, component) => {
   })
 }
 
+const handleSortChange = () => {
+  handleFieldChange()
+  curComponent.value.sortList = []
+  resetSort()
+}
+
+const resetSort = () => {
+  if (sortComputed.value) {
+    curComponent.value.sort = ''
+  }
+}
+
+const customSortFilterRef = ref()
+
+const sortSave = list => {
+  curComponent.value.sortList = cloneDeep(list)
+}
+
+const handleCustomClick = async () => {
+  if (sortComputed.value || curComponent.value.sort !== 'customSort') return
+  let list = cloneDeep(curComponent.value.sortList || [])
+  if (!list.length) {
+    const arr = await enumValueObj({ queryId: curComponent.value.sortId, searchText: '' })
+    list = arr.map(ele => ele[curComponent.value.sortId])
+  }
+  customSortFilterRef.value.sortInit([...new Set(list)])
+}
+
+const sortComputed = computed(() => {
+  const { sortId, displayId } = curComponent.value
+  return sortId && displayId && sortId !== displayId
+})
+
 const treeDialog = ref()
 const startTreeDesign = () => {
   const [comId] = curComponent.value.checkedFields
@@ -1835,6 +1878,10 @@ const relativeToCurrentList = computed(() => {
           value: 'monthBeginning'
         },
         {
+          label: t('dynamic_time.endOfMonth'),
+          value: 'monthEnd'
+        },
+        {
           label: t('dynamic_time.firstOfYear'),
           value: 'yearBeginning'
         }
@@ -1853,6 +1900,10 @@ const relativeToCurrentList = computed(() => {
         {
           label: t('dynamic_time.firstOfMonth'),
           value: 'monthBeginning'
+        },
+        {
+          label: t('dynamic_time.endOfMonth'),
+          value: 'monthEnd'
         },
         {
           label: t('dynamic_time.firstOfYear'),
@@ -1897,7 +1948,7 @@ const relativeToCurrentListRange = computed(() => {
           value: 'thisMonth'
         },
         {
-          label: t('dynamic_month.dynamic_month'),
+          label: t('dynamic_month.last'),
           value: 'lastMonth'
         },
         {
@@ -2796,6 +2847,7 @@ defineExpose({
                     :placeholder="t('v_query.display_field')"
                     class="search-field"
                     v-model="curComponent.displayId"
+                    @change="resetSort"
                   >
                     <template v-if="curComponent.displayId" #prefix>
                       <el-icon>
@@ -2857,7 +2909,7 @@ defineExpose({
                     :placeholder="t('v_query.the_sorting_field')"
                     v-model="curComponent.sortId"
                     class="sort-field"
-                    @change="handleFieldChange"
+                    @change="handleSortChange"
                   >
                     <template v-if="curComponent.sortId" #prefix>
                       <el-icon>
@@ -2911,6 +2963,13 @@ defineExpose({
                   >
                     <el-option :label="t('chart.asc')" value="asc" />
                     <el-option :label="t('chart.desc')" value="desc" />
+                    <el-option
+                      @click="handleCustomClick"
+                      :title="sortComputed ? $t('v_query.display_sort') : ''"
+                      :disabled="sortComputed"
+                      :label="t('v_query.custom_sort')"
+                      value="customSort"
+                    />
                   </el-select>
                 </div>
               </template>
@@ -2938,13 +2997,13 @@ defineExpose({
                       <span> {{ t('data_fill.form.option_value') }} </span>
                       <div :key="index" v-for="(_, index) in valueSource" class="select-item">
                         <el-input
-                          maxlength="20"
+                          maxlength="64"
                           v-if="curComponent.displayType === '2'"
                           @blur="weightlessness"
                           v-model.number="valueSource[index]"
                         ></el-input>
                         <el-input
-                          maxlength="20"
+                          maxlength="64"
                           v-else
                           @blur="weightlessness"
                           v-model="valueSource[index]"
@@ -3073,6 +3132,7 @@ defineExpose({
       <el-button type="primary" @click="numTypeChange">{{ t('dataset.confirm') }}</el-button>
     </template>
   </el-dialog>
+  <customSortFilter ref="customSortFilterRef" @save="sortSave"></customSortFilter>
   <CascadeDialog @saveCascade="saveCascade" ref="cascadeDialog"></CascadeDialog>
 </template>
 
@@ -3431,7 +3491,7 @@ defineExpose({
             }
           }
           .label {
-            width: 100px;
+            width: 80px;
             color: #1f2329;
           }
 

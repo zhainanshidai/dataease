@@ -156,6 +156,7 @@ export interface ApiConfiguration {
   type: string
   deTableName: string
   method: string
+  copy: boolean
   url: string
   status: string
   useJsonPath: boolean
@@ -178,6 +179,7 @@ export interface Node {
   name: string
   createBy: string
   creator: string
+  copy: boolean
   createTime: string
   id: number | string
   size: number

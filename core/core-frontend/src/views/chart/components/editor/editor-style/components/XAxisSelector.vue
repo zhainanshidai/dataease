@@ -50,6 +50,12 @@ const fontSizeList = computed(() => {
       value: i
     })
   }
+  for (let i = 50; i <= 200; i = i + 10) {
+    arr.push({
+      name: i + '',
+      value: i
+    })
+  }
   return arr
 })
 
@@ -429,6 +435,23 @@ onMounted(() => {
         />
       </el-form-item>
 
+      <el-form-item
+        class="form-item"
+        :class="'form-item-' + themes"
+        :label="t('chart.length_limit')"
+        v-if="isBidirectionalBar"
+      >
+        <el-input-number
+          :disabled="!state.axisForm.axisLabel.show"
+          style="width: 100%"
+          :effect="props.themes"
+          v-model="state.axisForm.axisLabel.lengthLimit"
+          :min="1"
+          size="small"
+          controls-position="right"
+          @change="changeAxisStyle('axisLabel.lengthLimit')"
+        />
+      </el-form-item>
       <template v-if="showProperty('axisLabelFormatter') && !isBarRangeTime">
         <el-form-item
           class="form-item"

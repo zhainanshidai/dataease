@@ -60,6 +60,13 @@ export const layerStore = defineStore('layer', {
       }
     },
 
+    hideComponentWithComponent(componentId?) {
+      const targetComponent = getComponentById(componentId)
+      // 隐藏
+      if (targetComponent) {
+        targetComponent.isShow = false
+      }
+    },
     hideComponent(componentId?) {
       const targetComponent = getComponentById(componentId)
       // 隐藏

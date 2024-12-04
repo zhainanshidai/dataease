@@ -71,6 +71,23 @@ const fontSizeList = computed(() => {
       value: i
     })
   }
+  for (let i = 50; i <= 200; i = i + 10) {
+    arr.push({
+      name: i + '',
+      value: i
+    })
+  }
+  return arr
+})
+
+const sizeList = computed(() => {
+  const arr = []
+  for (let i = 4; i <= 20; i = i + 2) {
+    arr.push({
+      name: i + '',
+      value: i
+    })
+  }
   return arr
 })
 
@@ -219,26 +236,49 @@ onMounted(() => {
     :model="state.legendForm"
     label-position="top"
   >
-    <el-form-item
-      :label="t('chart.icon')"
-      class="form-item"
-      :class="'form-item-' + themes"
-      v-if="showProperty('icon')"
-    >
-      <el-select
-        :effect="themes"
-        v-model="state.legendForm.icon"
-        :placeholder="t('chart.icon')"
-        @change="changeLegendStyle('icon')"
-      >
-        <el-option
-          v-for="item in iconSymbolOptions"
-          :key="item.value"
-          :label="item.name"
-          :value="item.value"
-        />
-      </el-select>
-    </el-form-item>
+    <el-row :gutter="8">
+      <el-col :span="12">
+        <el-form-item
+          :label="t('chart.icon')"
+          class="form-item"
+          :class="'form-item-' + themes"
+          v-if="showProperty('icon')"
+        >
+          <el-select
+            :effect="themes"
+            v-model="state.legendForm.icon"
+            :placeholder="t('chart.icon')"
+            @change="changeLegendStyle('icon')"
+          >
+            <el-option
+              v-for="item in iconSymbolOptions"
+              :key="item.value"
+              :label="item.name"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+      </el-col>
+
+      <el-col :span="12">
+        <el-form-item class="form-item" :class="'form-item-' + themes" v-if="showProperty('icon')">
+          <template #label>&nbsp;</template>
+          <el-select
+            :effect="themes"
+            v-model="state.legendForm.size"
+            size="small"
+            @change="changeLegendStyle('size')"
+          >
+            <el-option
+              v-for="option in sizeList"
+              :key="option.value"
+              :label="option.name"
+              :value="option.value"
+            />
+          </el-select>
+        </el-form-item>
+      </el-col>
+    </el-row>
 
     <el-space>
       <el-form-item

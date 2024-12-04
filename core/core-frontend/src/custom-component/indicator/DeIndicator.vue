@@ -43,6 +43,11 @@ const props = defineProps({
     type: String,
     required: false,
     default: 'common'
+  },
+  fontFamily: {
+    type: String,
+    required: false,
+    default: 'inherit'
   }
 })
 
@@ -195,8 +200,8 @@ const indicatorClass = ref<CSSProperties>({
   color: thresholdColor.value.color,
   'font-size': DEFAULT_INDICATOR_STYLE.fontSize + 'px',
   'font-family': defaultTo(
-    CHART_FONT_FAMILY_MAP[DEFAULT_INDICATOR_STYLE.fontFamily],
-    DEFAULT_INDICATOR_STYLE.fontFamily
+    props.fontFamily,
+    CHART_FONT_FAMILY_MAP[DEFAULT_INDICATOR_STYLE.fontFamily]
   ),
   'font-weight': DEFAULT_INDICATOR_STYLE.isBolder ? 'bold' : 'normal',
   'font-style': DEFAULT_INDICATOR_STYLE.isItalic ? 'italic' : 'normal',
@@ -209,8 +214,8 @@ const indicatorSuffixClass = ref<CSSProperties>({
   color: DEFAULT_INDICATOR_STYLE.suffixColor,
   'font-size': DEFAULT_INDICATOR_STYLE.suffixFontSize + 'px',
   'font-family': defaultTo(
-    CHART_FONT_FAMILY_MAP[DEFAULT_INDICATOR_STYLE.suffixFontFamily],
-    DEFAULT_INDICATOR_STYLE.suffixFontFamily
+    props.fontFamily,
+    CHART_FONT_FAMILY_MAP[DEFAULT_INDICATOR_STYLE.fontFamily]
   ),
   'font-weight': DEFAULT_INDICATOR_STYLE.suffixIsBolder ? 'bold' : 'normal',
   'font-style': DEFAULT_INDICATOR_STYLE.suffixIsItalic ? 'italic' : 'normal',
@@ -233,8 +238,8 @@ const indicatorNameClass = ref<CSSProperties>({
   color: DEFAULT_INDICATOR_NAME_STYLE.color,
   'font-size': DEFAULT_INDICATOR_NAME_STYLE.fontSize + 'px',
   'font-family': defaultTo(
-    CHART_FONT_FAMILY_MAP[DEFAULT_INDICATOR_NAME_STYLE.fontFamily],
-    DEFAULT_INDICATOR_NAME_STYLE.fontFamily
+    props.fontFamily,
+    CHART_FONT_FAMILY_MAP[DEFAULT_INDICATOR_STYLE.fontFamily]
   ),
   'font-weight': DEFAULT_INDICATOR_NAME_STYLE.isBolder ? 'bold' : 'normal',
   'font-style': DEFAULT_INDICATOR_NAME_STYLE.isItalic ? 'italic' : 'normal',
@@ -296,8 +301,8 @@ const renderChart = async view => {
         color: thresholdColor.value.color,
         'font-size': indicator.fontSize + 'px',
         'font-family': defaultTo(
-          CHART_FONT_FAMILY_MAP[indicator.fontFamily],
-          DEFAULT_INDICATOR_STYLE.fontFamily
+          indicator.fontFamily,
+          CHART_FONT_FAMILY_MAP[DEFAULT_INDICATOR_STYLE.fontFamily]
         ),
         'font-weight': indicator.isBolder ? 'bold' : 'normal',
         'font-style': indicator.isItalic ? 'italic' : 'normal',
@@ -311,8 +316,8 @@ const renderChart = async view => {
         color: suffixColor,
         'font-size': indicator.suffixFontSize + 'px',
         'font-family': defaultTo(
-          CHART_FONT_FAMILY_MAP[indicator.suffixFontFamily],
-          DEFAULT_INDICATOR_STYLE.suffixFontFamily
+          indicator.suffixFontFamily,
+          CHART_FONT_FAMILY_MAP[DEFAULT_INDICATOR_STYLE.suffixFontFamily]
         ),
         'font-weight': indicator.suffixIsBolder ? 'bold' : 'normal',
         'font-style': indicator.suffixIsItalic ? 'italic' : 'normal',
@@ -336,8 +341,8 @@ const renderChart = async view => {
         color: nameColor,
         'font-size': indicatorName.fontSize + 'px',
         'font-family': defaultTo(
-          CHART_FONT_FAMILY_MAP[indicatorName.fontFamily],
-          DEFAULT_INDICATOR_NAME_STYLE.fontFamily
+          indicatorName.fontFamily,
+          CHART_FONT_FAMILY_MAP[DEFAULT_INDICATOR_NAME_STYLE.fontFamily]
         ),
         'font-weight': indicatorName.isBolder ? 'bold' : 'normal',
         'font-style': indicatorName.isItalic ? 'italic' : 'normal',

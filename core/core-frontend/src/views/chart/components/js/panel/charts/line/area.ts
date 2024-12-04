@@ -13,6 +13,8 @@ import {
 import { cloneDeep } from 'lodash-es'
 import {
   flow,
+  getLineConditions,
+  getLineLabelColorByCondition,
   hexColorToRGBA,
   parseJson,
   setUpStackSeriesColor
@@ -41,7 +43,7 @@ export class Area extends G2PlotChartView<AreaOptions, G2Area> {
       'gradient',
       'seriesColor'
     ],
-    'label-selector': ['seriesLabelFormatter', 'showExtremum'],
+    'label-selector': ['seriesLabelVPosition', 'seriesLabelFormatter', 'showExtremum'],
     'tooltip-selector': [
       ...LINE_EDITOR_PROPERTY_INNER['tooltip-selector'],
       'seriesTooltipFormatter'
@@ -134,7 +136,8 @@ export class Area extends G2PlotChartView<AreaOptions, G2Area> {
         label: false
       }
     }
-    const { label: labelAttr } = parseJson(chart.customAttr)
+    const { label: labelAttr, basicStyle } = parseJson(chart.customAttr)
+    const conditions = getLineConditions(chart)
     const formatterMap = labelAttr.seriesLabelFormatter?.reduce((pre, next) => {
       pre[next.id] = next
       return pre
@@ -143,6 +146,7 @@ export class Area extends G2PlotChartView<AreaOptions, G2Area> {
     const label = {
       fields: [],
       ...tmpOptions.label,
+      layout: labelAttr.fullDisplay ? [{ type: 'limit-in-plot' }] : tmpOptions.label.layout,
       formatter: (data: Datum, _point) => {
         if (data.EXTREME) {
           return ''
@@ -157,18 +161,26 @@ export class Area extends G2PlotChartView<AreaOptions, G2Area> {
         if (!labelCfg.show) {
           return
         }
+        const position =
+          labelCfg.position === 'top'
+            ? -2 - basicStyle.lineSymbolSize
+            : 10 + basicStyle.lineSymbolSize
         const value = valueFormatter(data.value, labelCfg.formatterCfg)
+        const color =
+          getLineLabelColorByCondition(conditions, data.value, data.quotaList[0].id) ||
+          labelCfg.color
         const group = new Group({})
         group.addShape({
           type: 'text',
           attrs: {
             x: 0,
-            y: 0,
+            y: position,
             text: value,
             textAlign: 'start',
             textBaseline: 'top',
             fontSize: labelCfg.fontSize,
-            fill: labelCfg.color
+            fontFamily: chart.fontFamily,
+            fill: color
           }
         })
         return group
@@ -276,7 +288,8 @@ export class Area extends G2PlotChartView<AreaOptions, G2Area> {
       this.configXAxis,
       this.configYAxis,
       this.configSlider,
-      this.configAnalyse
+      this.configAnalyse,
+      this.configConditions
     )(chart, options, {}, this)
   }
 
@@ -291,7 +304,7 @@ export class Area extends G2PlotChartView<AreaOptions, G2Area> {
 export class StackArea extends Area {
   propertyInner = {
     ...this['propertyInner'],
-    'label-selector': ['fontSize', 'color', 'labelFormatter'],
+    'label-selector': ['vPosition', 'fontSize', 'color', 'labelFormatter'],
     'tooltip-selector': ['fontSize', 'color', 'tooltipFormatter', 'show']
   }
   axisConfig = {
@@ -304,8 +317,7 @@ export class StackArea extends Area {
     }
   }
   protected configLabel(chart: Chart, options: AreaOptions): AreaOptions {
-    const customAttr = parseJson(chart.customAttr)
-    const labelAttr = customAttr.label
+    const { label: labelAttr, basicStyle } = parseJson(chart.customAttr)
     if (!labelAttr?.show) {
       return {
         ...options,
@@ -316,10 +328,14 @@ export class StackArea extends Area {
     if (!labelAttr.fullDisplay) {
       const tmpOptions = super.configLabel(chart, options)
       layout.push(...tmpOptions.label.layout)
+    } else {
+      layout.push({ type: 'limit-in-plot' })
     }
+    const position =
+      labelAttr.position === 'top' ? -2 - basicStyle.lineSymbolSize : 8 + basicStyle.lineSymbolSize
     const label: Label = {
       position: labelAttr.position as any,
-      offsetY: -8,
+      offsetY: position,
       layout,
       style: {
         fill: labelAttr.color,
@@ -373,6 +389,8 @@ export class StackArea extends Area {
       ...this.baseOptions,
       isStack: true
     }
+    delete this.propertyInner.threshold
+    this.properties = this.properties.filter(item => item !== 'threshold')
     this.axis.push('extStack')
   }
 }

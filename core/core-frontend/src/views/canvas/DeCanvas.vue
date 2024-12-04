@@ -39,6 +39,12 @@ const props = defineProps({
     type: Number,
     required: false,
     default: 1
+  },
+  // 仪表板字体
+  fontFamily: {
+    type: String,
+    required: false,
+    default: 'inherit'
   }
 })
 const { canvasStyleData, componentData, canvasViewInfo, canvasId, canvasActive, outerScale } =
@@ -98,7 +104,9 @@ const handleNewFromCanvasMain = newComponentInfo => {
     adaptCurThemeCommonStyle(component)
     nextTick(() => {
       cyGridster.value.addItemBox(component) //在适当的时候初始化布局组件
-      scrollTo(component.y)
+      nextTick(() => {
+        scrollTo(component.y)
+      })
     })
     snapshotStore.recordSnapshotCache('renderChart', component.id)
   }
@@ -319,6 +327,7 @@ defineExpose({
         :base-margin-top="baseMarginTop"
         :base-width="baseWidth"
         :base-height="baseHeight"
+        :font-family="fontFamily"
         @scrollCanvasToTop="scrollTo(1)"
       ></canvas-core>
     </div>

@@ -1,6 +1,6 @@
 <!-- IconSlider.vue -->
 <template>
-  <el-tooltip offset="22" effect="dark" placement="left" content="查询">
+  <el-tooltip offset="22" effect="dark" placement="left" :content="t('visualization.query')">
     <div class="canvas-filter" @mousedown.stop @mousedup.stop>
       <div class="icon-slider" @mouseenter="slideOut" @mouseleave="slideBack">
         <div
@@ -21,10 +21,12 @@ import { computed, ref } from 'vue'
 import { ElTooltip } from 'element-plus-secondary'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { storeToRefs } from 'pinia'
+import { useI18n } from '@/hooks/web/useI18n'
 const dvMainStore = dvMainStoreWithOut()
 const offset = ref(0)
 const slideDistance = ref(14) // 滑动距离
 const { canvasState } = storeToRefs(dvMainStore)
+const { t } = useI18n()
 
 const filterActive = computed(() => canvasState.value.curPointArea === 'hidden')
 const slideOut = () => {

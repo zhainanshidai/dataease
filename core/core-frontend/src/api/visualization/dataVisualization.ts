@@ -35,6 +35,9 @@ export const findById = async (
   return request.post({ url: '/dataVisualization/findById', data })
 }
 
+export const updateCheckVersion = dvId =>
+  request.get({ url: `/dataVisualization/updateCheckVersion/${dvId}` })
+
 export const queryTreeApi = async (data: BusiTreeRequest): Promise<IResponse> => {
   return request.post({ url: '/dataVisualization/tree', data }).then(res => {
     return res?.data
@@ -52,6 +55,9 @@ export const findDvType = async dvId =>
 
 export const save = data => request.post({ url: '/dataVisualization/save', data })
 
+export const checkCanvasChange = data =>
+  request.post({ url: '/dataVisualization/checkCanvasChange', data, loading: true })
+
 export const saveCanvas = data =>
   request.post({ url: '/dataVisualization/saveCanvas', data, loading: true })
 
@@ -68,7 +74,7 @@ export const moveResource = data => request.post({ url: '/dataVisualization/move
 export const copyResource = data => request.post({ url: '/dataVisualization/copy', data })
 
 export const deleteLogic = (dvId, busiFlag) =>
-  request.delete({ url: '/dataVisualization/deleteLogic/' + dvId + '/' + busiFlag })
+  request.post({ url: '/dataVisualization/deleteLogic/' + dvId + '/' + busiFlag })
 
 export const querySubjectWithGroupApi = data =>
   request.post({ url: '/visualizationSubject/querySubjectWithGroup', data })
@@ -76,7 +82,7 @@ export const querySubjectWithGroupApi = data =>
 export const saveOrUpdateSubject = data =>
   request.post({ url: '/visualizationSubject/update', data })
 
-export const deleteSubject = id => request.delete({ url: '/visualizationSubject/delete/' + id })
+export const deleteSubject = id => request.post({ url: '/visualizationSubject/delete/' + id })
 
 export const dvNameCheck = async data => request.post({ url: '/dataVisualization/nameCheck', data })
 

@@ -5,8 +5,10 @@ import { uiLoadApi } from '@/api/login'
 import { useCache } from '@/hooks/web/useCache'
 import colorFunctions from 'less/lib/less/functions/color.js'
 import colorTree from 'less/lib/less/tree/color.js'
+import { useEmbedded } from '@/store/modules/embedded'
 import { setTitle } from '@/utils/utils'
 
+const embeddedStore = useEmbedded()
 const basePath = import.meta.env.VITE_API_BASEPATH
 const baseUrl = basePath + '/appearance/image/'
 import { isBtnShow } from '@/utils/utils'
@@ -172,7 +174,11 @@ export const useAppearanceStore = defineStore('appearanceStore', {
         }
         fontStyleElement.innerHTML = `@font-face {
             font-family: '${name}';
-            src: url(${basePath}/typeface/download/${currentFont.fileTransName});
+            src: url(${
+              embeddedStore.baseUrl
+                ? (embeddedStore.baseUrl + basePath).replace('/./', '/')
+                : basePath
+            }/typeface/download/${currentFont.fileTransName});
             font-weight: normal;
             font-style: normal;
             }`
@@ -208,7 +214,11 @@ export const useAppearanceStore = defineStore('appearanceStore', {
       defaultFont().then(res => {
         const [font] = res || []
         setDefaultFont(
-          `${basePath}/typeface/download/${font?.fileTransName}`,
+          `${
+            embeddedStore.baseUrl
+              ? (embeddedStore.baseUrl + basePath).replace('/./', '/')
+              : basePath
+          }/typeface/download/${font?.fileTransName}`,
           font?.name,
           font?.fileTransName
         )

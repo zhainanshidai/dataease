@@ -1,4 +1,5 @@
 import type { ManipulateType } from 'dayjs'
+import dayjs from 'dayjs'
 function getThisYear() {
   return new Date(`${new Date().getFullYear()}/1`)
 }
@@ -39,6 +40,10 @@ function getYesterday() {
 function getMonthBeginning() {
   const date = new Date()
   return new Date(`${date.getFullYear()}/${date.getMonth() + 1}/1`)
+}
+
+function getMonthEnd() {
+  return new Date(dayjs().endOf('month').format('YYYY/MM/DD HH:mm:ss'))
 }
 
 function getYearBeginning() {
@@ -211,6 +216,12 @@ function getDynamicRange({
           isDateTime ? monthBeginningVal : monthBeginningVal + 24 * 3600 * 1000 - 1000
         ]
         break
+      case 'monthEnd':
+        const monthEndVal = getMonthEnd().getTime()
+        selectValue = isDateTime
+          ? [monthEndVal, monthEndVal]
+          : [monthEndVal - 24 * 3600 * 1000 + 1000, monthEndVal]
+        break
       case 'yearBeginning':
         const yearBeginningVal = getYearBeginning().getTime()
         selectValue = [
@@ -240,7 +251,7 @@ interface TimeRange {
   timeNumRange: number
   relativeToCurrentTypeRange: ManipulateType
   aroundRange: string
-  timeGranularityMultiple: string
+  timeGranularityMultiple?: string
 }
 export {
   TimeRange,
@@ -251,6 +262,7 @@ export {
   getToday,
   getYesterday,
   getMonthBeginning,
+  getMonthEnd,
   getYearBeginning,
   getCustomTime,
   getDynamicRange

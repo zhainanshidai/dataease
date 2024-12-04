@@ -1,10 +1,13 @@
 package io.dataease.extensions.view.dto;
 
 
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.dataease.extensions.datasource.dto.DatasetTableFieldDTO;
 import lombok.Data;
 
+
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -23,4 +26,5 @@ public class ChartExtFilterDTO {
     @JsonIgnore
     private List<String> originValue;
     private int filterType;// 0-过滤组件，1-下钻，2-联动，外部参数
+
 }

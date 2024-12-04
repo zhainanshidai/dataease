@@ -4,13 +4,21 @@ import { ElIcon, ElMessage } from 'element-plus-secondary'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { storeToRefs } from 'pinia'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
+import Icon from '../icon-custom/src/Icon.vue'
 const dvMainStore = dvMainStoreWithOut()
 const { canvasCollapse } = storeToRefs(dvMainStore)
 let componentNameEdit = ref(false)
-let inputComponentName = ref('')
+let inputComponentName = ref({ id: null, name: null })
 let componentNameInputAttr = ref(null)
+import dvInfoSvg from '@/assets/svg/dv-info.svg'
+import { useI18n } from '@/hooks/web/useI18n'
 const snapshotStore = snapshotStoreWithOut()
+const { t } = useI18n()
 const props = defineProps({
+  element: {
+    required: false,
+    default: {}
+  },
   scrollWidth: {
     required: false,
     type: Number,
@@ -36,6 +44,7 @@ const props = defineProps({
     type: String,
     default: 'defaultSide'
   },
+
   view: {
     type: Object as PropType<ChartObj>,
     required: false
@@ -66,25 +75,32 @@ const slideStyle = computed(() => {
 
 const closeEditComponentName = () => {
   componentNameEdit.value = false
-  if (!inputComponentName.value || !inputComponentName.value.trim()) {
+  if (props.element.id !== inputComponentName.value.id) {
     return
   }
-  if (inputComponentName.value.trim() === view.value.title) {
+  if (!inputComponentName.value.name || !inputComponentName.value.name.trim()) {
     return
   }
-  if (inputComponentName.value.trim().length > 64 || inputComponentName.value.trim().length < 2) {
+  if (inputComponentName.value.name.trim() === view.value.title) {
+    return
+  }
+  if (
+    inputComponentName.value.name.trim().length > 64 ||
+    inputComponentName.value.name.trim().length < 2
+  ) {
     ElMessage.warning('名称字段长度2-64个字符')
     editComponentName()
     return
   }
-  view.value.title = inputComponentName.value
-  inputComponentName.value = ''
+  view.value.title = inputComponentName.value.name
+  inputComponentName.value.name = ''
 }
 
 const editComponentName = () => {
   if (isViewTitle.value) {
     componentNameEdit.value = true
-    inputComponentName.value = view.value.title
+    inputComponentName.value.name = view.value.title
+    inputComponentName.value.id = view.value.id
     nextTick(() => {
       componentNameInputAttr.value.focus()
     })
@@ -115,6 +131,30 @@ const onComponentNameChange = () => {
         @dblclick="editComponentName"
       >
         {{ isViewTitle ? view.title : title }}
+        <el-popover
+          show-arrow
+          :offset="8"
+          :effect="themes"
+          placement="bottom"
+          width="200"
+          trigger="click"
+        >
+          <template #reference>
+            <span>
+              <el-icon
+                v-show="element && element['id']"
+                style="margin: 2px 0 0 4px; cursor: pointer"
+                ><Icon><dvInfoSvg class="svg-icon" /></Icon
+              ></el-icon>
+            </span>
+          </template>
+          <div style="margin-bottom: 4px; font-size: 14px">
+            {{ t('visualization.component_id') }}
+          </div>
+          <div style="font-size: 14px">
+            {{ element['id'] }}
+          </div>
+        </el-popover>
       </div>
       <el-icon
         :title="title"
@@ -142,7 +182,7 @@ const onComponentNameChange = () => {
     <Teleport v-if="componentNameEdit" :to="'#attr-slide-component-name' + slideIndex">
       <input
         ref="componentNameInputAttr"
-        v-model="inputComponentName"
+        v-model="inputComponentName.name"
         width="100%"
         :effect="themeInfo"
         @change="onComponentNameChange"
@@ -262,6 +302,7 @@ const onComponentNameChange = () => {
   font-size: 14px !important;
   overflow: hidden;
   cursor: pointer;
+  display: flex;
   input {
     position: absolute;
     left: 0;

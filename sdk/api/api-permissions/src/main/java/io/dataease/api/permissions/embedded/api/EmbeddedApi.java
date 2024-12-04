@@ -7,6 +7,7 @@ import io.dataease.api.permissions.embedded.dto.EmbeddedEditor;
 import io.dataease.api.permissions.embedded.dto.EmbeddedOrigin;
 import io.dataease.api.permissions.embedded.dto.EmbeddedResetRequest;
 import io.dataease.api.permissions.embedded.vo.EmbeddedGridVO;
+import io.dataease.license.config.XpackResource;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,6 +23,7 @@ import java.util.Map;
 
 @Tag(name = "嵌入式")
 @ApiSupport(order = 883, author = "fit2cloud-someone")
+@XpackResource
 public interface EmbeddedApi {
 
     @Operation(summary = "查询")
@@ -61,4 +63,7 @@ public interface EmbeddedApi {
 
     @GetMapping("/getTokenArgs")
     Map<String, Object> getTokenArgs();
+
+    @GetMapping("/limitCount")
+    int getLimitCount();
 }

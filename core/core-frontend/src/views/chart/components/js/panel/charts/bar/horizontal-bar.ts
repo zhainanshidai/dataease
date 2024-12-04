@@ -4,6 +4,7 @@ import {
 } from '@/views/chart/components/js/panel/types/impl/g2plot'
 import type { Bar, BarOptions } from '@antv/g2plot/esm/plots/bar'
 import {
+  configAxisLabelLengthLimit,
   configPlotTooltipEvent,
   getPadding,
   getTooltipContainer,
@@ -65,7 +66,8 @@ export class HorizontalBar extends G2PlotChartView<BarOptions, Bar> {
       'splitLine',
       'axisForm',
       'axisLabel',
-      'position'
+      'position',
+      'showLengthLimit'
     ]
   }
   axis: AxisType[] = [...BAR_AXIS_TYPE]
@@ -100,6 +102,7 @@ export class HorizontalBar extends G2PlotChartView<BarOptions, Bar> {
 
     newChart.on('interval:click', action)
     configPlotTooltipEvent(chart, newChart)
+    configAxisLabelLengthLimit(chart, newChart)
     return newChart
   }
 
@@ -221,6 +224,7 @@ export class HorizontalBar extends G2PlotChartView<BarOptions, Bar> {
             textAlign: 'start',
             textBaseline: 'top',
             fontSize: labelCfg.fontSize,
+            fontFamily: chart.fontFamily,
             fill: labelCfg.color
           }
         })
@@ -364,8 +368,20 @@ export class HorizontalStackBar extends HorizontalBar {
   }
 
   protected setupOptions(chart: Chart, options: BarOptions): BarOptions {
-    const tmp = super.setupOptions(chart, options)
-    return flow(this.configData)(chart, tmp, {}, this)
+    return flow(
+      this.configTheme,
+      this.configEmptyDataStrategy,
+      this.configData,
+      this.configColor,
+      this.configBasicStyle,
+      this.configLabel,
+      this.configTooltip,
+      this.configLegend,
+      this.configXAxis,
+      this.configYAxis,
+      this.configSlider,
+      this.configAnalyseHorizontal
+    )(chart, options, {}, this)
   }
 
   constructor(name = 'bar-stack-horizontal') {

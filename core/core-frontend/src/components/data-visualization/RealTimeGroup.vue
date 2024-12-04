@@ -391,6 +391,7 @@ const handleContextMenu = e => {
     </el-row>
     <Teleport v-if="editComponentId && nameEdit" :to="editComponentId">
       <input
+        class="custom-teleport"
         @keydown.stop
         @keyup.stop
         ref="nameInput"
@@ -540,6 +541,9 @@ const handleContextMenu = e => {
   :deep(.component-label) {
     color: #5f5f5f !important;
   }
+}
+.custom-teleport {
+  background: #1a1a1a !important;
 }
 </style>
 

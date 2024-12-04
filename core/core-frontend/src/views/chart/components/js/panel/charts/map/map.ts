@@ -19,7 +19,7 @@ import {
   mapRendering
 } from '@/views/chart/components/js/panel/common/common_antv'
 import type { FeatureCollection } from '@antv/l7plot/dist/esm/plots/choropleth/types'
-import { cloneDeep, defaultsDeep } from 'lodash-es'
+import { cloneDeep, defaultsDeep, isEmpty } from 'lodash-es'
 import { useI18n } from '@/hooks/web/useI18n'
 import { valueFormatter } from '../../../formatter'
 import {
@@ -37,6 +37,9 @@ import {
 } from '@antv/l7plot-component/dist/esm/legend/category/constants'
 import substitute from '@antv/util/esm/substitute'
 import { configCarouselTooltip } from '@/views/chart/components/js/panel/charts/map/tooltip-carousel'
+import { getCustomGeoArea } from '@/api/map'
+import { centroid } from '@turf/centroid'
+import { TextLayer } from '@antv/l7plot/dist/esm'
 
 const { t } = useI18n()
 
@@ -77,15 +80,60 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
   }
 
   async drawChart(drawOption: L7PlotDrawOptions<Choropleth>): Promise<Choropleth> {
-    const { chart, level, areaId, container, action } = drawOption
+    const { chart, level, container, action, scope } = drawOption
+    const { areaId } = drawOption
     if (!areaId) {
       return
     }
     chart.container = container
-    const sourceData = JSON.parse(JSON.stringify(chart.data?.data || []))
-    let data = []
+    let sourceData = JSON.parse(JSON.stringify(chart.data?.data || []))
     const { misc } = parseJson(chart.customAttr)
     const { legend } = parseJson(chart.customStyle)
+    let geoJson = {} as FeatureCollection
+    // 自定义区域，去除非区域数据，优先级最高
+    let customSubArea: CustomGeoSubArea[] = []
+    if (areaId.startsWith('custom_')) {
+      customSubArea = (await getCustomGeoArea(areaId)).data || []
+      geoJson = cloneDeep(await getGeoJsonFile('156'))
+      const areaNameMap = geoJson.features.reduce((p, n) => {
+        p['156' + n.properties.adcode] = n.properties.name
+        return p
+      }, {})
+      const { areaMapping } = parseJson(chart.senior)
+      const areaMap = customSubArea.reduce((p, n) => {
+        const mappedName = areaMapping?.[areaId]?.[n.name]
+        if (mappedName) {
+          n.name = mappedName
+        }
+        p[n.name] = n
+        n.scopeArr = n.scope?.split(',') || []
+        return p
+      }, {})
+      const fakeData = []
+      sourceData.forEach(d => {
+        const area = areaMap[d.name]
+        if (area) {
+          area.scopeArr.forEach(adcode => {
+            fakeData.push({
+              ...d,
+              name: areaNameMap[adcode],
+              field: areaNameMap[adcode],
+              scope: area.scopeArr,
+              areaName: d.name
+            })
+          })
+        }
+      })
+      sourceData = fakeData
+    } else {
+      if (scope) {
+        geoJson = cloneDeep(await getGeoJsonFile('156'))
+        geoJson.features = geoJson.features.filter(f => scope.includes('156' + f.properties.adcode))
+      } else {
+        geoJson = cloneDeep(await getGeoJsonFile(areaId))
+      }
+    }
+    let data = []
     // 自定义图例
     if (!misc.mapAutoLegend && legend.show) {
       let minValue = misc.mapLegendMin
@@ -112,7 +160,6 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
     } else {
       data = sourceData
     }
-    const geoJson = cloneDeep(await getGeoJsonFile(areaId))
     let options: ChoroplethOptions = {
       preserveDrawingBuffer: true,
       map: {
@@ -157,28 +204,41 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
       // 禁用线上地图数据
       customFetchGeoData: () => null
     }
-    const context = { drawOption, geoJson }
+    const context: Record<string, any> = { drawOption, geoJson, customSubArea }
     options = this.setupOptions(chart, options, context)
     const { Choropleth } = await import('@antv/l7plot/dist/esm/plots/choropleth')
     const view = new Choropleth(container, options)
-    this.configZoomButton(chart, view)
+    // 完成地图渲染后配置缩放按钮，为了能够获取到默认的缩放比例
+    view.on('loaded', () => {
+      this.configZoomButton(chart, view)
+    })
     mapRendering(container)
     view.once('loaded', () => {
       mapRendered(container)
+      const { layers } = context
+      if (layers) {
+        layers.forEach(l => {
+          view.addLayer(l)
+        })
+      }
       view.scene.map['keyboard'].disable()
       view.on('fillAreaLayer:click', (ev: MapMouseEvent) => {
         const data = ev.feature.properties
+        if (areaId.startsWith('custom_')) {
+          data.name = data.areaName
+          data.adcode = '156'
+        }
         action({
           x: ev.x,
           y: ev.y,
           data: {
             data,
-            extra: { adcode: data.adcode }
+            extra: { adcode: data.adcode, scope: data.scope }
           }
         })
       })
       chart.container = container
-      configCarouselTooltip(chart, view, data, null, areaId)
+      configCarouselTooltip(chart, view, data, null, customSubArea, drawOption)
     })
     return view
   }
@@ -206,16 +266,15 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
       options.label && (options.label.field = 'name')
       return options
     }
-    const sourceData = JSON.parse(JSON.stringify(chart.data.data))
+    const sourceData = options.source.data
     const colors = basicStyle.colors.map(item => hexColorToRGBA(item, basicStyle.alpha))
     const { legend } = parseJson(chart.customStyle)
-    let data = []
-    data = sourceData
+    let data = sourceData
     let colorScale = []
     let minValue = misc.mapLegendMin
     let maxValue = misc.mapLegendMax
+    let mapLegendNumber = misc.mapLegendNumber
     if (legend.show) {
-      let mapLegendNumber = misc.mapLegendNumber
       getMaxAndMinValueByData(sourceData, 'value', maxValue, minValue, (max, min) => {
         maxValue = max
         minValue = min
@@ -262,10 +321,38 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
     return options
   }
 
+  // 内部函数 创建自定义图例的内容
+  private createLegendCustomContent = showItems => {
+    const containerDom = createDom(CONTAINER_TPL) as HTMLElement
+    const listDom = containerDom.getElementsByClassName(LIST_CLASS)[0] as HTMLElement
+    showItems.forEach(item => {
+      let value = '-'
+      if (item.value !== '') {
+        if (Array.isArray(item.value)) {
+          item.value.forEach((v, i) => {
+            item.value[i] = Number.isNaN(v) || v === 'NaN' ? 'NaN' : parseFloat(v).toFixed(0)
+          })
+          value = item.value.join('-')
+        } else {
+          const tmp = item.value as string
+          value = Number.isNaN(tmp) || tmp === 'NaN' ? 'NaN' : parseFloat(tmp).toFixed(0)
+        }
+      }
+      const substituteObj = { ...item, value }
+
+      const domStr = substitute(ITEM_TPL, substituteObj)
+      const itemDom = createDom(domStr)
+      // 给 legend 形状用的
+      itemDom.style.setProperty('--bgColor', item.color)
+      listDom.appendChild(itemDom)
+    })
+    return listDom
+  }
+
   private customConfigLegend(
     chart: Chart,
     options: ChoroplethOptions,
-    _context: Record<string, any>
+    context: Record<string, any>
   ): ChoroplethOptions {
     const { basicStyle, misc } = parseJson(chart.customAttr)
     const colors = basicStyle.colors.map(item => hexColorToRGBA(item, basicStyle.alpha))
@@ -275,33 +362,6 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
     const { legend } = parseJson(chart.customStyle)
     if (!legend.show) {
       return options
-    }
-    // 内部函数 创建自定义图例的内容
-    const createLegendCustomContent = showItems => {
-      const containerDom = createDom(CONTAINER_TPL) as HTMLElement
-      const listDom = containerDom.getElementsByClassName(LIST_CLASS)[0] as HTMLElement
-      showItems.forEach(item => {
-        let value = '-'
-        if (item.value !== '') {
-          if (Array.isArray(item.value)) {
-            item.value.forEach((v, i) => {
-              item.value[i] = Number.isNaN(v) || v === 'NaN' ? 'NaN' : parseFloat(v).toFixed(0)
-            })
-            value = item.value.join('-')
-          } else {
-            const tmp = item.value as string
-            value = Number.isNaN(tmp) || tmp === 'NaN' ? 'NaN' : parseFloat(tmp).toFixed(0)
-          }
-        }
-        const substituteObj = { ...item, value }
-
-        const domStr = substitute(ITEM_TPL, substituteObj)
-        const itemDom = createDom(domStr)
-        // 给 legend 形状用的
-        itemDom.style.setProperty('--bgColor', item.color)
-        listDom.appendChild(itemDom)
-      })
-      return listDom
     }
     const LEGEND_SHAPE_STYLE_MAP = {
       circle: {
@@ -324,17 +384,32 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
       domStyles: {
         'l7plot-legend__category-value': {
           fontSize: legend.fontSize + 'px',
-          color: legend.color
+          color: legend.color,
+          'font-family': chart.fontFamily ? chart.fontFamily : undefined
         },
         'l7plot-legend__category-marker': {
           ...LEGEND_SHAPE_STYLE_MAP[legend.icon],
-          width: '9px',
-          height: '9px',
-          ...(legend.icon === 'triangle' ? {} : { border: '0.01px solid #f4f4f4' })
+          width: legend.size + 'px',
+          height: legend.size + 'px',
+          ...(legend.icon === 'triangle'
+            ? {
+                ...LEGEND_SHAPE_STYLE_MAP[legend.icon]['triangle'],
+                borderLeft: `${legend.size / 2}px solid transparent`,
+                borderRight: `${legend.size / 2}px solid transparent`,
+                borderBottom: `${legend.size}px solid var(--bgColor)`
+              }
+            : { border: '0.01px solid #f4f4f4' }),
+          ...(legend.icon === 'diamond'
+            ? {
+                transform: 'rotate(45deg)',
+                marginBottom: `${legend.size / 4}px`
+              }
+            : {})
         }
       }
     }
-    if (!misc.mapAutoLegend && misc.mapLegendRangeType === 'custom') {
+    // 不是自动图例、自定义图例区间、不是下钻时
+    if (!misc.mapAutoLegend && misc.mapLegendRangeType === 'custom' && !chart.drill) {
       // 获取图例区间数据
       const items = []
       // 区间数组
@@ -342,10 +417,10 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
         .slice(0, -1)
         .map((item, index) => [item, misc.mapLegendCustomRange[index + 1]])
       ranges.forEach((range, index) => {
-        const tmpRange = [range[0]?.toFixed(0), range[1]?.toFixed(0)]
+        const tmpRange = [range[0], range[1]]
         const colorIndex = index % colors.length
         // 当区间第一个值小于最小值时，颜色取地图底色
-        const isLessThanMin = range[0] < ranges[0][0]
+        const isLessThanMin = range[0] < ranges[0][0] && range[1] < ranges[0][0]
         let rangeColor = colors[colorIndex]
         if (isLessThanMin) {
           rangeColor = hexColorToRGBA(basicStyle.areaBaseColor, basicStyle.alpha)
@@ -357,20 +432,166 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
       })
       customLegend['customContent'] = (_: string, _items: CategoryLegendListItem[]) => {
         if (items?.length) {
-          return createLegendCustomContent(items)
+          return this.createLegendCustomContent(items)
         }
         return ''
       }
+      options.color['value'] = ({ value }) => {
+        const item = items.find(item => value >= item.value[0] && value <= item.value[1])
+        return item ? item.color : hexColorToRGBA(basicStyle.areaBaseColor, basicStyle.alpha)
+      }
+      options.color.scale.domain = [ranges[0][0], ranges[ranges.length - 1][1]]
     } else {
       customLegend['customContent'] = (_: string, items: CategoryLegendListItem[]) => {
         const showItems = items?.length > 30 ? items.slice(0, 30) : items
         if (showItems?.length) {
-          return createLegendCustomContent(showItems)
+          return this.createLegendCustomContent(showItems)
         }
         return ''
       }
     }
+    // 下钻时按照数据值计算图例
+    if (chart.drill) {
+      getMaxAndMinValueByData(options.source.data, 'value', 0, 0, (max, min) => {
+        options.color.scale.domain = [min, max]
+      })
+    }
     defaultsDeep(options, { legend: customLegend })
+    return options
+  }
+
+  protected configCustomArea(
+    chart: Chart,
+    options: ChoroplethOptions,
+    context: Record<string, any>
+  ): ChoroplethOptions {
+    const { drawOption, customSubArea, geoJson } = context
+    if (!drawOption.areaId.startsWith('custom_')) {
+      return options
+    }
+    const customAttr = parseJson(chart.customAttr)
+    const { label } = customAttr
+    const data = chart.data.data
+    const areaMap = data?.reduce((obj, value) => {
+      obj[value['field']] = value
+      return obj
+    }, {})
+    const geoJsonMap = geoJson.features.reduce((p, n) => {
+      if (n.properties['adcode']) {
+        p['156' + n.properties['adcode']] = n
+      }
+      return p
+    }, {})
+    customSubArea.forEach(area => {
+      const areaJsonArr = []
+      area.scopeArr?.forEach(adcode => {
+        const json = geoJsonMap[adcode]
+        json && areaJsonArr.push(json)
+      })
+      if (areaJsonArr.length) {
+        const areaJson: FeatureCollection = {
+          type: 'FeatureCollection',
+          features: areaJsonArr
+        }
+        const center = centroid(areaJson)
+        // 轮播用
+        area.centroid = [center.geometry.coordinates[0], center.geometry.coordinates[1]]
+      }
+    })
+    //处理label
+    options.label = false
+    if (label.show) {
+      const labelLocation = []
+      customSubArea.forEach(area => {
+        if (area.centroid) {
+          const content = []
+          if (label.showDimension) {
+            content.push(area.name)
+          }
+          if (label.showQuota) {
+            areaMap[area.name] &&
+              content.push(valueFormatter(areaMap[area.name].value, label.quotaLabelFormatter))
+          }
+          labelLocation.push({
+            name: content.join('\n\n'),
+            x: area.centroid[0],
+            y: area.centroid[1]
+          })
+        }
+      })
+      const areaLabelLayer = new TextLayer({
+        name: 'areaLabelLayer',
+        source: {
+          data: labelLocation,
+          parser: {
+            type: 'json',
+            x: 'x',
+            y: 'y'
+          }
+        },
+        field: 'name',
+        style: {
+          fill: label.color,
+          fontSize: label.fontSize,
+          opacity: 1,
+          fontWeight: 'bold',
+          textAnchor: 'center',
+          textAllowOverlap: label.fullDisplay,
+          padding: !label.fullDisplay ? [2, 2] : undefined
+        }
+      })
+      context.layers = [areaLabelLayer]
+    }
+    // 处理tooltip
+    const subAreaMap = customSubArea.reduce((p, n) => {
+      n.scopeArr.forEach(a => {
+        p[a] = n.name
+      })
+      return p
+    }, {})
+    if (options.tooltip && options.tooltip.showComponent) {
+      options.tooltip.items = ['name', 'adcode', 'value']
+      options.tooltip.customTitle = ({ name, adcode }) => {
+        adcode = '156' + adcode
+        return subAreaMap[adcode] ?? name
+      }
+      const tooltip = customAttr.tooltip
+      const formatterMap = tooltip.seriesTooltipFormatter
+        ?.filter(i => i.show)
+        .reduce((pre, next) => {
+          pre[next.id] = next
+          return pre
+        }, {}) as Record<string, SeriesFormatter>
+      options.tooltip.customItems = originalItem => {
+        const result = []
+        if (isEmpty(formatterMap)) {
+          return result
+        }
+        const head = originalItem.properties
+        const { adcode } = head
+        const areaName = subAreaMap['156' + adcode]
+        const valItem = areaMap[areaName]
+        if (!valItem) {
+          return result
+        }
+        const formatter = formatterMap[valItem.quotaList?.[0]?.id]
+        if (!isEmpty(formatter)) {
+          const originValue = parseFloat(valItem.value as string)
+          const value = valueFormatter(originValue, formatter.formatterCfg)
+          const name = isEmpty(formatter.chartShowName) ? formatter.name : formatter.chartShowName
+          result.push({ ...valItem, name, value: `${value ?? ''}` })
+        }
+        valItem.dynamicTooltipValue?.forEach(item => {
+          const formatter = formatterMap[item.fieldId]
+          if (formatter) {
+            const value = valueFormatter(parseFloat(item.value), formatter.formatterCfg)
+            const name = isEmpty(formatter.chartShowName) ? formatter.name : formatter.chartShowName
+            result.push({ color: 'grey', name, value: `${value ?? ''}` })
+          }
+        })
+        return result
+      }
+    }
     return options
   }
 
@@ -390,7 +611,8 @@ export class Map extends L7PlotChartView<ChoroplethOptions, Choropleth> {
       this.configStyle,
       this.configTooltip,
       this.configBasicStyle,
-      this.customConfigLegend
-    )(chart, options, context)
+      this.customConfigLegend,
+      this.configCustomArea
+    )(chart, options, context, this)
   }
 }

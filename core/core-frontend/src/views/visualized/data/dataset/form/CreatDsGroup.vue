@@ -274,7 +274,7 @@ const saveDataset = () => {
               ElMessage.success(t('data_set.rename_successful'))
               break
             default:
-              useEmitt().emitter.emit('onDatasetSave')
+              emits('onDatasetSave')
               ElMessage.success(t('common.save_success'))
               break
           }
@@ -291,7 +291,7 @@ defineExpose({
   editeInit
 })
 
-const emits = defineEmits(['finish'])
+const emits = defineEmits(['finish', 'onDatasetSave'])
 </script>
 
 <template>

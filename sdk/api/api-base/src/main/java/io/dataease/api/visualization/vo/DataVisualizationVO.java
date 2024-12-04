@@ -146,6 +146,16 @@ public class DataVisualizationVO implements Serializable {
     private Integer version;
 
     /**
+     * 内容标识
+     */
+    private String contentId;
+
+    /**
+     * 内容检查标识
+     */
+    private String checkVersion;
+
+    /**
      * 图表基本信息
      */
     private Map<Long, ChartViewDTO> canvasViewInfo = new HashMap<>();
@@ -170,6 +180,8 @@ public class DataVisualizationVO implements Serializable {
      * 权限信息
      */
     private Integer weight;
+
+    private int ext;
 
     /**
      * 应用信息

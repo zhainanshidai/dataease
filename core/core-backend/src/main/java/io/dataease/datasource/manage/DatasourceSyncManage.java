@@ -22,6 +22,7 @@ import io.dataease.extensions.datasource.provider.Provider;
 import io.dataease.job.schedule.ExtractDataJob;
 import io.dataease.job.schedule.ScheduleManager;
 import io.dataease.utils.BeanUtils;
+import io.dataease.utils.JsonUtil;
 import io.dataease.utils.LogUtil;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
@@ -30,6 +31,7 @@ import org.quartz.JobKey;
 import org.quartz.TriggerKey;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -70,7 +72,7 @@ public class DatasourceSyncManage {
                 if (updateType.equals(DatasourceServer.UpdateType.all_scope)) {
                     createEngineTable(TableUtils.tmpName(datasourceRequest.getTable()), tableFields);
                 }
-                extractExcelData(datasourceRequest, updateType);
+                extractExcelData(datasourceRequest, updateType, tableFields);
                 if (updateType.equals(DatasourceServer.UpdateType.all_scope)) {
                     replaceTable(datasourceRequest.getTable());
                 }
@@ -145,7 +147,7 @@ public class DatasourceSyncManage {
                 if (updateType.equals(DatasourceServer.UpdateType.all_scope)) {
                     createEngineTable(TableUtils.tmpName(datasourceRequest.getTable()), tableFields);
                 }
-                extractApiData(datasourceRequest, updateType);
+                extractApiData(datasourceRequest, updateType, tableFields);
                 if (updateType.equals(DatasourceServer.UpdateType.all_scope)) {
                     replaceTable(datasourceRequest.getTable());
                 }
@@ -198,7 +200,7 @@ public class DatasourceSyncManage {
                     if (updateType.equals(DatasourceServer.UpdateType.all_scope)) {
                         createEngineTable(TableUtils.tmpName(datasourceRequest.getTable()), tableFields);
                     }
-                    extractApiData(datasourceRequest, updateType);
+                    extractApiData(datasourceRequest, updateType, tableFields);
                     if (updateType.equals(DatasourceServer.UpdateType.all_scope)) {
                         replaceTable(datasourceRequest.getTable());
                     }
@@ -222,20 +224,10 @@ public class DatasourceSyncManage {
         }
     }
 
-    private void extractApiData(DatasourceRequest datasourceRequest, DatasourceServer.UpdateType extractType) throws Exception {
+    private void extractApiData(DatasourceRequest datasourceRequest, DatasourceServer.UpdateType extractType, List<TableField> tableFields) throws Exception {
         Map<String, Object> result = ApiUtils.fetchResultField(datasourceRequest);
         List<String[]> dataList = (List<String[]>) result.get("dataList");
-        String engineTableName;
-        switch (extractType) {
-            case all_scope:
-                engineTableName = TableUtils.tmpName(TableUtils.tableName(datasourceRequest.getTable()));
-                break;
-            default:
-                engineTableName = TableUtils.tableName(datasourceRequest.getTable());
-                break;
-        }
         CoreDeEngine engine = engineManage.info();
-
         EngineRequest engineRequest = new EngineRequest();
         engineRequest.setEngine(engine);
         EngineProvider engineProvider = ProviderUtil.getEngineProvider(engine.getType());
@@ -246,27 +238,16 @@ public class DatasourceSyncManage {
         } else {
             totalPage = dataList.size() / pageNumber;
         }
-
         for (int page = 1; page <= totalPage; page++) {
-            engineRequest.setQuery(engineProvider.insertSql(engineTableName, dataList, page, pageNumber));
+            engineRequest.setQuery(engineProvider.insertSql(datasourceRequest.getTable(), extractType, dataList, page, pageNumber, tableFields));
             calciteProvider.exec(engineRequest);
         }
     }
 
-    private void extractExcelData(DatasourceRequest datasourceRequest, DatasourceServer.UpdateType extractType) throws Exception {
+    private void extractExcelData(DatasourceRequest datasourceRequest, DatasourceServer.UpdateType extractType, List<TableField> tableFields) throws Exception {
         ExcelUtils excelUtils = new ExcelUtils();
         List<String[]> dataList = excelUtils.fetchDataList(datasourceRequest);
-        String engineTableName;
-        switch (extractType) {
-            case all_scope:
-                engineTableName = TableUtils.tmpName(TableUtils.tableName(datasourceRequest.getTable()));
-                break;
-            default:
-                engineTableName = TableUtils.tableName(datasourceRequest.getTable());
-                break;
-        }
         CoreDeEngine engine = engineManage.info();
-
         EngineRequest engineRequest = new EngineRequest();
         engineRequest.setEngine(engine);
         EngineProvider engineProvider = ProviderUtil.getEngineProvider(engine.getType());
@@ -278,7 +259,7 @@ public class DatasourceSyncManage {
             totalPage = dataList.size() / pageNumber;
         }
         for (int page = 1; page <= totalPage; page++) {
-            engineRequest.setQuery(engineProvider.insertSql(engineTableName, dataList, page, pageNumber));
+            engineRequest.setQuery(engineProvider.insertSql(datasourceRequest.getTable(), extractType, dataList, page, pageNumber, tableFields));
             calciteProvider.exec(engineRequest);
         }
     }
@@ -324,18 +305,14 @@ public class DatasourceSyncManage {
                     scheduleManager.getDefaultJobDataMap(datasourceTask.getDsId().toString(), datasourceTask.getCron(), datasourceTask.getId().toString(), datasourceTask.getUpdateType()));
         } else {
             Date endTime;
-            if (StringUtils.equalsIgnoreCase(datasourceTask.getEndLimit().toString(), "1")) {
-                if (datasourceTask.getEndTime() == null || datasourceTask.getEndTime() == 0) {
-                    endTime = null;
-                } else {
-                    endTime = new Date(datasourceTask.getEndTime());
-                    if (endTime.before(new Date())) {
-                        deleteSchedule(datasourceTask);
-                        return;
-                    }
-                }
-            } else {
+            if (datasourceTask.getEndTime() == null || datasourceTask.getEndTime() == 0) {
                 endTime = null;
+            } else {
+                endTime = new Date(datasourceTask.getEndTime());
+                if (endTime.before(new Date())) {
+                    deleteSchedule(datasourceTask);
+                    return;
+                }
             }
 
             scheduleManager.addOrUpdateCronJob(new JobKey(datasourceTask.getId().toString(), datasourceTask.getDsId().toString()),

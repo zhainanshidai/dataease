@@ -3,10 +3,8 @@ package io.dataease.api.permissions.auth.api;
 
 import com.github.xiaoymin.knife4j.annotations.ApiOperationSupport;
 import com.github.xiaoymin.knife4j.annotations.ApiSupport;
-import io.dataease.api.permissions.auth.dto.BusiPerCheckDTO;
-import io.dataease.api.permissions.auth.dto.BusiResourceCreator;
-import io.dataease.api.permissions.auth.dto.BusiResourceEditor;
-import io.dataease.api.permissions.auth.dto.BusiResourceMover;
+import io.dataease.api.permissions.auth.dto.*;
+import io.dataease.api.permissions.auth.vo.PermissionValVO;
 import io.dataease.api.permissions.auth.vo.ResourceNodeVO;
 import io.dataease.model.BusiNodeRequest;
 import io.dataease.model.BusiNodeVO;
@@ -75,8 +73,8 @@ public interface InteractiveAuthApi {
 
     @Operation(summary = "权限查询")
     @ApiOperationSupport(order = 9)
-    @PostMapping("/queryAuth")
-    Integer queryAuth(@RequestBody BusiPerCheckDTO checkDTO);
+    @PostMapping("/queryAuth/{id}")
+    PermissionValVO queryAuth(@PathVariable("id") Long id);
 
     @GetMapping("/query2Root/{id}/{flag}")
     List<ResourceNodeVO> query2Root(@PathVariable("id") Long id, @PathVariable("flag") Integer flag);
@@ -88,4 +86,7 @@ public interface InteractiveAuthApi {
     String OrgNameForResource(ExportTaskDTO exportTaskDTO);
 
     void editResourceExtraFlag(BusiResourceEditor editor);
+
+    @PostMapping("/batchAuthorize")
+    void batchAuthorize(@RequestBody BusiBatchAuthorizeRequest request);
 }

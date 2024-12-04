@@ -122,6 +122,7 @@ declare interface ChartLegendStyle {
    * 字体大小
    */
   fontSize: number
+  size: number
 }
 
 /**
@@ -193,6 +194,10 @@ declare interface AxisLabel {
    * 格式化设置
    */
   formatter: string
+  /**
+   * 长度限制
+   */
+  lengthLimit: number
 }
 /**
  * 轴线条设置

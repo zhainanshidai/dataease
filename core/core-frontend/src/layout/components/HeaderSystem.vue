@@ -7,10 +7,11 @@ import { useRouter } from 'vue-router'
 import AccountOperator from '@/layout/components/AccountOperator.vue'
 import { useAppearanceStoreWithOut } from '@/store/modules/appearance'
 import { useI18n } from '@/hooks/web/useI18n'
+import { isDesktop } from '@/utils/ModelUtil'
 const appearanceStore = useAppearanceStoreWithOut()
 const { push } = useRouter()
 const { t } = useI18n()
-
+const desktop = isDesktop()
 const props = withDefaults(
   defineProps<{
     title: string
@@ -43,7 +44,7 @@ const navigate = computed(() => appearanceStore.getNavigate)
         <span class="work">{{ t('work_branch.back_to_work_branch') }}</span>
       </span>
 
-      <AccountOperator />
+      <AccountOperator v-if="!desktop" />
     </div>
   </el-header>
 </template>

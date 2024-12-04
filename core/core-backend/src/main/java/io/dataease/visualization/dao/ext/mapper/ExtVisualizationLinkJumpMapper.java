@@ -4,6 +4,7 @@ import io.dataease.api.visualization.dto.VisualizationLinkJumpDTO;
 import io.dataease.api.visualization.request.VisualizationLinkJumpBaseRequest;
 import io.dataease.api.visualization.vo.VisualizationLinkJumpInfoVO;
 import io.dataease.api.visualization.vo.VisualizationLinkJumpVO;
+import io.dataease.api.visualization.vo.VisualizationOutParamsJumpVO;
 import io.dataease.api.visualization.vo.VisualizationViewTableVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -36,6 +37,10 @@ public interface ExtVisualizationLinkJumpMapper {
     void copyLinkJumpTarget(@Param("copyId")Long copyId);
 
     List<VisualizationLinkJumpVO> findLinkJumpWithDvId(@Param("dvId")Long dvId);
+
     List<VisualizationLinkJumpInfoVO> findLinkJumpInfoWithDvId(@Param("dvId")Long dvId);
+
     List<VisualizationViewTableVO> getViewTableDetails(@Param("dvId")Long dvId);
+
+    List<VisualizationOutParamsJumpVO> queryOutParamsTargetWithDvId(@Param("dvId")Long dvId);
 }

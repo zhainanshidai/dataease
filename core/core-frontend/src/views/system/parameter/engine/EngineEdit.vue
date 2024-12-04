@@ -10,6 +10,8 @@ import { cloneDeep } from 'lodash-es'
 import { getDeEngine } from '@/api/datasource'
 import { CustomPassword } from '@/components/custom-password'
 import { Base64 } from 'js-base64'
+import { querySymmetricKey } from '@/api/login'
+import { symmetricDecrypt } from '@/utils/encryption'
 const { t } = useI18n()
 const dialogVisible = ref(false)
 const loadingInstance = ref(null)
@@ -149,45 +151,47 @@ const defaultInfo = {
 }
 const nodeInfo = reactive(cloneDeep(defaultInfo))
 const edit = () => {
-  getDeEngine()
-    .then(res => {
-      let {
-        name,
-        createBy,
-        id,
-        createTime,
-        creator,
-        type,
-        pid,
-        configuration,
-        syncSetting,
-        fileName,
-        size,
-        description,
-        lastSyncTime
-      } = res.data
-      if (configuration) {
-        configuration = JSON.parse(configuration)
-      }
-      Object.assign(nodeInfo, {
-        name,
-        pid,
-        description,
-        fileName,
-        size,
-        createTime,
-        creator,
-        createBy,
-        id,
-        type,
-        configuration,
-        syncSetting,
-        lastSyncTime
+  querySymmetricKey().then(response => {
+    getDeEngine()
+      .then(res => {
+        let {
+          name,
+          createBy,
+          id,
+          createTime,
+          creator,
+          type,
+          pid,
+          configuration,
+          syncSetting,
+          fileName,
+          size,
+          description,
+          lastSyncTime
+        } = res.data
+        if (configuration) {
+          configuration = JSON.parse(symmetricDecrypt(configuration, response.data))
+        }
+        Object.assign(nodeInfo, {
+          name,
+          pid,
+          description,
+          fileName,
+          size,
+          createTime,
+          creator,
+          createBy,
+          id,
+          type,
+          configuration,
+          syncSetting,
+          lastSyncTime
+        })
       })
-    })
-    .finally(() => {
-      dialogVisible.value = true
-    })
+      .finally(() => {
+        dialogVisible.value = true
+      })
+  })
 }
 const basicForm = ref()
 

@@ -57,6 +57,7 @@
                 :prefix-icon="styleColorKey.icon"
                 :triggerWidth="styleColorKey.width"
                 is-custom
+                show-alpha
                 :predefine="state.predefineColors"
                 @change="
                   changeStyle({ key: styleColorKey.value, value: styleForm[styleColorKey.value] })
@@ -290,6 +291,7 @@ import dvStyleHeadFontActiveColor from '@/assets/svg/dv-style-headFontActiveColo
 import dvStyleHeadFontColor from '@/assets/svg/dv-style-headFontColor.svg'
 import dvStyleScrollSpeed from '@/assets/svg/dv-style-scroll-speed.svg'
 import dvStyleOpacity from '@/assets/svg/dv-style-opacity.svg'
+import dvStyleBlur from '@/assets/svg/dv-style-blur.svg'
 import dvStyleFontSize from '@/assets/svg/dv-style-fontSize.svg'
 import dvStyleLetterSpacing from '@/assets/svg/dv-style-letterSpacing.svg'
 import dvStyleActiveFont from '@/assets/svg/dv-style-activeFont.svg'
@@ -359,6 +361,7 @@ const scrollSpeedList = [
 ]
 
 const opacitySizeList = [
+  { name: '0', value: 0 },
   { name: '0.1', value: 0.1 },
   { name: '0.2', value: 0.2 },
   { name: '0.3', value: 0.3 },
@@ -370,6 +373,39 @@ const opacitySizeList = [
   { name: '0.9', value: 0.9 },
   { name: '1', value: 1 }
 ]
+const backdropBlurList = [
+  { name: '0', value: 'blur(0px)' },
+  { name: '1', value: 'blur(1px)' },
+  { name: '2', value: 'blur(2px)' },
+  { name: '3', value: 'blur(3px)' },
+  { name: '4', value: 'blur(4px)' },
+  { name: '5', value: 'blur(5px)' },
+  { name: '6', value: 'blur(6px)' },
+  { name: '7', value: 'blur(7px)' },
+  { name: '8', value: 'blur(8px)' },
+  { name: '9', value: 'blur(9px)' },
+  { name: '10', value: 'blur(10px)' },
+  { name: '11', value: 'blur(11px)' },
+  { name: '12', value: 'blur(12px)' },
+  { name: '13', value: 'blur(13px)' },
+  { name: '14', value: 'blur(14px)' },
+  { name: '15', value: 'blur(15px)' },
+  { name: '16', value: 'blur(16px)' },
+  { name: '17', value: 'blur(17px)' },
+  { name: '18', value: 'blur(18px)' },
+  { name: '19', value: 'blur(19px)' },
+  { name: '20', value: 'blur(20px)' },
+  { name: '21', value: 'blur(21px)' },
+  { name: '22', value: 'blur(22px)' },
+  { name: '23', value: 'blur(23px)' },
+  { name: '24', value: 'blur(24px)' },
+  { name: '25', value: 'blur(25px)' },
+  { name: '26', value: 'blur(26px)' },
+  { name: '27', value: 'blur(27px)' },
+  { name: '28', value: 'blur(28px)' },
+  { name: '29', value: 'blur(29px)' },
+  { name: '30', value: 'blur(30px)' }
+]
 
 const styleForm = computed<any>(() => element.value.style)
 const state = reactive({
@@ -379,20 +415,25 @@ const state = reactive({
 })
 
 const styleColorKeyArray = [
-  { value: 'color', label: '颜色', width: 90, icon: dvStyleColor },
+  { value: 'color', label: t('visualization.color'), width: 90, icon: dvStyleColor },
   {
     value: 'headFontColor',
-    label: '头部字体颜色',
+    label: t('visualization.head_font_color'),
     width: 90,
     icon: dvStyleHeadFontColor
   },
   {
     value: 'headFontActiveColor',
-    label: '激活字体颜色',
+    label: t('visualization.head_font_active_color'),
     width: 90,
     icon: dvStyleHeadFontActiveColor
   },
-  { value: 'backgroundColor', label: '背景色', width: 90, icon: dvStyleBackgroundColor }
+  {
+    value: 'backgroundColor',
+    label: t('visualization.background_color'),
+    width: 90,
+    icon: dvStyleBackgroundColor
+  }
 ]
 
 const letterSpacingList = computed(() => {
@@ -414,12 +455,18 @@ const fontSizeList = computed(() => {
       value: i
     })
   }
+  for (let i = 70; i <= 300; i = i + 10) {
+    arr.push({
+      name: i + '',
+      value: i
+    })
+  }
   return arr
 })
 const styleOptionKeyArrayPre = [
   {
     value: 'fontFamily',
-    label: '字体',
+    label: t('visualization.font_family'),
     customOption: fontFamilyList,
     width: '188px',
     icon: dvStyleFontFamily
@@ -430,21 +477,21 @@ const styleOptionKeyArrayPre = [
 const styleOptionMountedKeyArray = [
   {
     value: 'letterSpacing',
-    label: '字间距',
+    label: t('visualization.letter_spacing'),
     customOption: letterSpacingList.value,
     width: '90px',
     icon: dvStyleLetterSpacing
   },
   {
     value: 'fontSize',
-    label: '字体大小',
+    label: t('visualization.font_size'),
     customOption: fontSizeList.value,
     width: '90px',
     icon: dvStyleFontSize
   },
   {
     value: 'activeFontSize',
-    label: '激活字体大小',
+    label: t('visualization.active_font_size'),
     customOption: fontSizeList.value,
     width: '90px',
     icon: dvStyleActiveFont
@@ -455,17 +502,24 @@ const styleOptionMountedKeyArray = [
 const styleOptionKeyArray = [
   {
     value: 'scrollSpeed',
-    label: '滚动速度',
+    label: t('visualization.scroll_speed'),
     customOption: scrollSpeedList,
     width: '90px',
     icon: dvStyleScrollSpeed
   },
   {
     value: 'opacity',
-    label: '不透明度',
+    label: t('visualization.opacity'),
     customOption: opacitySizeList,
     width: '90px',
     icon: dvStyleOpacity
+  },
+  {
+    value: 'backdropFilter',
+    label: t('visualization.background_opacity'),
+    customOption: backdropBlurList,
+    width: '90px',
+    icon: dvStyleBlur
   }
 ]
 

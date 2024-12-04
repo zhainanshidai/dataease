@@ -9,7 +9,7 @@
   >
     <div class="export-button">
       <el-select
-        v-if="optType === 'enlarge' && authShow"
+        v-if="optType === 'enlarge' && exportPermissions[0]"
         v-model="pixel"
         class="pixel-select"
         size="small"
@@ -26,7 +26,7 @@
 
       <el-button
         class="m-button"
-        v-if="optType === 'enlarge' && authShow"
+        v-if="optType === 'enlarge' && exportPermissions[0]"
         link
         icon="Download"
         size="middle"
@@ -36,7 +36,7 @@
       </el-button>
       <el-button
         class="m-button"
-        v-if="optType === 'details' && authShow"
+        v-if="optType === 'details' && exportPermissions[1]"
         link
         icon="Download"
         size="middle"
@@ -50,7 +50,7 @@
       </el-button>
       <el-button
         class="m-button"
-        v-if="optType === 'details' && authShow"
+        v-if="optType === 'details' && exportPermissions[2]"
         link
         icon="Download"
         size="middle"
@@ -64,7 +64,7 @@
       </el-button>
       <el-button
         class="m-button"
-        v-if="optType === 'details' && authShow && viewInfo.type === 'table-pivot'"
+        v-if="optType === 'details' && exportPermissions[2] && viewInfo.type === 'table-pivot'"
         link
         icon="Download"
         size="middle"
@@ -73,7 +73,11 @@
       >
         <span>导出Excel(带格式)</span>
       </el-button>
-      <el-divider class="close-divider" direction="vertical" v-if="authShow" />
+      <el-divider
+        class="close-divider"
+        direction="vertical"
+        v-if="exportPermissions[0] || exportPermissions[1] || exportPermissions[2]"
+      />
     </div>
     <div
       v-loading="downLoading"
@@ -150,6 +154,7 @@ import { useRequestStoreWithOut } from '@/store/modules/request'
 import { usePermissionStoreWithOut } from '@/store/modules/permission'
 import { activeWatermarkCheckUser } from '@/components/watermark/watermark'
 import { getCanvasStyle } from '@/utils/style'
+import { exportPermission } from '@/utils/utils'
 const downLoading = ref(false)
 const dvMainStore = dvMainStoreWithOut()
 const dialogShow = ref(false)
@@ -167,7 +172,6 @@ const { dvInfo, editMode } = storeToRefs(dvMainStore)
 const exportLoading = ref(false)
 const sourceViewType = ref()
 const activeName = ref('left')
-const userInfo = ref(null)
 const DETAIL_CHART_ATTR: DeepPartial<ChartObj> = {
   render: 'antv',
   type: 'table-info',
@@ -212,7 +216,9 @@ const DETAIL_TABLE_ATTR: DeepPartial<ChartObj> = {
   showPosition: 'dialog'
 }
 
-const authShow = computed(() => editMode.value === 'edit' || dvInfo.value.weight > 3)
+const exportPermissions = computed(() =>
+  exportPermission(dvInfo.value['weight'], dvInfo.value['ext'])
+)
 
 const customExport = computed(() => {
   const style =
@@ -323,17 +329,19 @@ const downloadViewImage = () => {
 
 const downloadViewDetails = (downloadType = 'view') => {
   const viewDataInfo = dvMainStore.getViewDataDetails(viewInfo.value.id)
+  const viewInfoSource = dvMainStore.getViewDetails(viewInfo.value.id)
   if (!viewDataInfo) {
     ElMessage.error('当前无字段，无法导出')
     return
   }
   const chartExtRequest = dvMainStore.getLastViewRequestInfo(viewInfo.value.id)
   const chart = {
-    ...viewInfo.value,
+    ...viewInfoSource,
     chartExtRequest,
     data: viewDataInfo,
     type: sourceViewType.value,
-    downloadType: downloadType
+    downloadType: downloadType,
+    busiFlag: dvInfo.value.type
   }
   exportLoading.value = true
   exportExcelDownload(chart, () => {

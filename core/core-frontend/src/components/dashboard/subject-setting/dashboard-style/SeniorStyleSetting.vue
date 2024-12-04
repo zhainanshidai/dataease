@@ -13,7 +13,7 @@
               <el-color-picker
                 :effect="themes"
                 v-model="seniorStyleSetting.linkageIconColor"
-                :trigger-width="197"
+                :trigger-width="100"
                 is-custom
                 :predefine="state.predefineColors"
                 @change="themeChange"
@@ -30,7 +30,7 @@
               <el-color-picker
                 v-model="seniorStyleSetting.drillLayerColor"
                 :effect="themes"
-                :trigger-width="197"
+                :trigger-width="100"
                 is-custom
                 :predefine="state.predefineColors"
                 @change="themeChange"

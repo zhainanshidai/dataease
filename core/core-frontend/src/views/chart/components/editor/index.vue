@@ -55,7 +55,7 @@ import CalcFieldEdit from '@/views/visualized/data/dataset/form/CalcFieldEdit.vu
 import { getFieldName, guid } from '@/views/visualized/data/dataset/form/util'
 import { cloneDeep, forEach, get } from 'lodash-es'
 import { deleteField, saveField } from '@/api/dataset'
-import { getWorldTree } from '@/api/map'
+import { getWorldTree, listCustomGeoArea } from '@/api/map'
 import chartViewManager from '@/views/chart/components/js/panel'
 import DatasetSelect from '@/views/chart/components/editor/dataset-select/DatasetSelect.vue'
 import { useDraggable } from '@vueuse/core'
@@ -71,14 +71,25 @@ import {
   iconFieldCalculatedMap,
   iconFieldCalculatedQMap
 } from '@/components/icon-group/field-calculated-list'
+import { useCache } from '@/hooks/web/useCache'
+import { canvasSave } from '@/utils/canvasUtils'
+
+const { wsCache } = useCache('localStorage')
 const embeddedStore = useEmbedded()
 const snapshotStore = snapshotStoreWithOut()
 const dvMainStore = dvMainStoreWithOut()
-const { canvasCollapse, curComponent, componentData, editMode, mobileInPc, fullscreenFlag } =
-  storeToRefs(dvMainStore)
+const {
+  canvasCollapse,
+  curComponent,
+  componentData,
+  editMode,
+  mobileInPc,
+  fullscreenFlag,
+  dvInfo
+} = storeToRefs(dvMainStore)
 const router = useRouter()
 let componentNameEdit = ref(false)
-let inputComponentName = ref('')
+let inputComponentName = ref({ id: null, name: null })
 let componentNameInput = ref(null)
 
 const { t } = useI18n()
@@ -120,24 +131,32 @@ const onComponentNameChange = () => {
 
 const closeEditComponentName = () => {
   componentNameEdit.value = false
-  if (!inputComponentName.value || !inputComponentName.value.trim()) {
+  if (curComponent.value.id !== inputComponentName.value.id) {
     return
   }
-  if (inputComponentName.value.trim() === view.value.title) {
+  if (!inputComponentName.value.name || !inputComponentName.value.name.trim()) {
     return
   }
-  if (inputComponentName.value.trim().length > 64 || inputComponentName.value.trim().length < 2) {
+  if (inputComponentName.value.name.trim() === view.value.title) {
+    return
+  }
+  if (
+    inputComponentName.value.name.trim().length > 64 ||
+    inputComponentName.value.name.trim().length < 2
+  ) {
     ElMessage.warning('名称字段长度2-64个字符')
     editComponentName()
     return
   }
-  view.value.title = inputComponentName.value
-  inputComponentName.value = ''
+  view.value.title = inputComponentName.value.name
+  inputComponentName.value.name = ''
+  inputComponentName.value.id = ''
 }
 
 const editComponentName = () => {
   componentNameEdit.value = true
-  inputComponentName.value = view.value.title
+  inputComponentName.value.name = view.value.title
+  inputComponentName.value.id = view.value.id
   nextTick(() => {
     componentNameInput.value.focus()
   })
@@ -290,8 +309,17 @@ watch(
   newVal => {
     if (showAxis('area')) {
       if (!state.worldTree?.length) {
-        getWorldTree().then(res => {
-          state.worldTree.splice(0, state.worldTree.length, res.data)
+        getWorldTree().then(async res => {
+          const customAreaList = (await listCustomGeoArea()).data
+          const customRoot = {
+            id: 'customRoot',
+            name: '自定义区域',
+            disabled: true
+          }
+          if (customAreaList.length) {
+            customRoot.children = customAreaList
+          }
+          state.worldTree.splice(0, state.worldTree.length, res.data, customRoot)
           state.areaId = view.value?.customAttr?.map?.id
         })
       } else {
@@ -308,7 +336,8 @@ watch(
 )
 const treeProps = {
   label: 'name',
-  children: 'children'
+  children: 'children',
+  disabled: 'disabled'
 }
 
 const recordSnapshotInfo = type => {
@@ -866,6 +895,9 @@ const renderChart = view => {
 }
 
 const onAreaChange = val => {
+  if (val.id === 'customRoot') {
+    return
+  }
   view.value.customAttr.map = { id: val.id, level: val.level }
   renderChart(view.value)
 }
@@ -885,6 +917,7 @@ const onTypeChange = (render, type) => {
   view.value.render = render
   view.value.type = type
   emitter.emit('chart-type-change')
+  emitter.emit('chart-type-change-' + view.value.id)
   // 处理配置项默认值，不同图表的同一配置项默认值不同
   const chartViewInstance = chartViewManager.getChartView(view.value.render, view.value.type)
   if (chartViewInstance) {
@@ -1086,13 +1119,19 @@ const onFunctionCfgChange = val => {
 }
 
 const onBackgroundChange = val => {
-  curComponent.value.commonBackground = val
-  if (mobileInPc.value) {
-    //移动端设计
-    useEmitt().emitter.emit('onMobileStatusChange', {
-      type: 'componentStyleChange',
-      value: { type: 'commonBackground', component: JSON.parse(JSON.stringify(curComponent.value)) }
-    })
+  // 修复#13299
+  if (curComponent.value.id === view.value?.id) {
+    curComponent.value.commonBackground = val
+    if (mobileInPc.value) {
+      //移动端设计
+      useEmitt().emitter.emit('onMobileStatusChange', {
+        type: 'componentStyleChange',
+        value: {
+          type: 'commonBackground',
+          component: JSON.parse(JSON.stringify(curComponent.value))
+        }
+      })
+    }
   }
 }
 
@@ -1396,10 +1435,15 @@ const initOpenHandler = newWindow => {
   }
 }
 const addDsWindow = () => {
+  if (!dvInfo.value.id) {
+    ElMessage.warning(t('visualization.save_page_tips'))
+    return
+  }
   const path =
     embeddedStore.getToken && appStore.getIsIframe ? 'dataset-embedded-form' : '/dataset-form'
   let routeData = router.resolve(path)
-  const newWindow = window.open(routeData.href, '_blank')
+  const openType = wsCache.get('open-backend') === '1' ? '_self' : '_blank'
+  const newWindow = window.open(routeData.href, openType)
   initOpenHandler(newWindow)
 }
 const editDs = () => {
@@ -1411,8 +1455,21 @@ const editDs = () => {
       id: view.value.tableId
     }
   })
-  const newWindow = window.open(routeData.href, '_blank')
-  initOpenHandler(newWindow)
+  const openType = wsCache.get('open-backend') === '1' ? '_self' : '_blank'
+  // 检查是否保存
+  if (openType === '_self') {
+    if (!dvInfo.value.id) {
+      ElMessage.warning(t('visualization.save_page_tips'))
+      return
+    }
+    canvasSave(() => {
+      const newWindow = window.open(routeData.href, openType)
+      initOpenHandler(newWindow)
+    })
+  } else {
+    const newWindow = window.open(routeData.href, openType)
+    initOpenHandler(newWindow)
+  }
 }
 
 const showQuotaEditCompare = item => {
@@ -1909,7 +1966,9 @@ const deleteChartFieldItem = id => {
                       ><Icon><dvInfoSvg class="svg-icon" /></Icon
                     ></el-icon>
                   </template>
-                  <div style="margin-bottom: 4px; font-size: 14px; color: #646a73">图表ID</div>
+                  <div style="margin-bottom: 4px; font-size: 14px; color: #646a73">
+                    {{ t('visualization.view_id') }}
+                  </div>
                   <div style="font-size: 14px; color: #1f2329">
                     {{ view.id }}
                   </div>
@@ -3232,7 +3291,7 @@ const deleteChartFieldItem = id => {
             <Expand v-else class="collapse-icon" />
           </el-icon>
           <div v-if="canvasCollapse.datasetAreaCollapse" class="collapse-title">
-            <span style="font-size: 14px">数据集</span>
+            <span style="font-size: 14px">{{ t('visualization.dataset') }}</span>
           </div>
           <el-container
             v-if="!canvasCollapse.datasetAreaCollapse"
@@ -3240,7 +3299,7 @@ const deleteChartFieldItem = id => {
             class="dataset-area view-panel-row"
           >
             <el-header class="editor-title">
-              <span style="font-size: 14px">数据集</span>
+              <span style="font-size: 14px">{{ t('visualization.dataset') }}</span>
             </el-header>
             <el-main class="dataset-main-top">
               <el-row class="dataset-select">
@@ -3254,7 +3313,11 @@ const deleteChartFieldItem = id => {
                   @add-ds-window="addDsWindow"
                   @on-dataset-change="recordSnapshotInfo('calcData')"
                 />
-                <el-tooltip :effect="toolTip" content="编辑数据集" placement="top">
+                <el-tooltip
+                  :effect="toolTip"
+                  :content="$t('deDataset.edit_dataset')"
+                  placement="top"
+                >
                   <el-icon
                     v-if="curDatasetWeight >= 7 && !isDataEaseBi"
                     class="field-search-icon-btn"
@@ -3823,7 +3886,7 @@ const deleteChartFieldItem = id => {
   <Teleport v-if="componentNameEdit" :to="'#component-name'">
     <input
       ref="componentNameInput"
-      v-model="inputComponentName"
+      v-model="inputComponentName.name"
       :effect="themes"
       width="100%"
       @change="onComponentNameChange"
@@ -4927,6 +4990,12 @@ span {
   margin-top: 8px;
   :deep(.ed-select) {
     display: block;
+  }
+  :deep(div.ed-select--dark div[data-key='customRoot'] li.is-disabled span) {
+    color: white;
+  }
+  :deep(div[data-key='customRoot'] li.is-disabled span) {
+    color: black;
   }
 }
 

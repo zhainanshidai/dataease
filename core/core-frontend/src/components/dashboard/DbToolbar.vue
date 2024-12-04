@@ -19,7 +19,7 @@ import { ElMessage, ElMessageBox } from 'element-plus-secondary'
 import eventBus from '@/utils/eventBus'
 import { useEmbedded } from '@/store/modules/embedded'
 import { deepCopy } from '@/utils/utils'
-import { nextTick, reactive, ref, computed, toRefs } from 'vue'
+import { nextTick, reactive, ref, computed, toRefs, onBeforeUnmount, onMounted } from 'vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { useAppStoreWithOut } from '@/store/modules/app'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
@@ -36,7 +36,7 @@ import MultiplexingCanvas from '@/views/common/MultiplexingCanvas.vue'
 import { useI18n } from '@/hooks/web/useI18n'
 import { getPanelAllLinkageInfo, saveLinkage } from '@/api/visualization/linkage'
 import { queryVisualizationJumpInfo } from '@/api/visualization/linkJump'
-import { canvasSave, initCanvasData } from '@/utils/canvasUtils'
+import { canvasSave, checkCanvasChangePre, initCanvasData } from '@/utils/canvasUtils'
 import { useEmitt } from '@/hooks/web/useEmitt'
 import { copyStoreWithOut } from '@/store/modules/data-visualization/copy'
 import TabsGroup from '@/custom-component/component-group/TabsGroup.vue'
@@ -80,6 +80,7 @@ const resourceGroupOpt = ref(null)
 const outerParamsSetRef = ref(null)
 const { wsCache } = useCache('localStorage')
 const userStore = useUserStoreWithOut()
+const isIframe = computed(() => appStore.getIsIframe)
 
 const props = defineProps({
   createType: {
@@ -138,7 +139,7 @@ const previewOuter = () => {
     return
   }
   canvasSave(() => {
-    const url = '#/preview?ignoreParams=true&dvId=' + dvInfo.value.id
+    const url = '#/preview?dvId=' + dvInfo.value.id + '&ignoreParams=true'
     const newWindow = window.open(url, '_blank')
     initOpenHandler(newWindow)
   })
@@ -198,14 +199,18 @@ const saveCanvasWithCheck = () => {
         },
         appData: appData.value
       }
-      resourceAppOpt.value.init(params)
+      nextTick(() => {
+        resourceAppOpt.value.init(params)
+      })
     } else {
-      const params = { name: dvInfo.value.name, leaf: true, id: dvInfo.value.pid }
+      const params = { name: dvInfo.value.name, leaf: true, id: dvInfo.value.pid || '0' }
       resourceGroupOpt.value.optInit('leaf', params, 'newLeaf', true)
       return
     }
   }
-  saveResource()
+  checkCanvasChangePre(() => {
+    saveResource()
+  })
 }
 
 const saveResource = () => {
@@ -221,7 +226,15 @@ const saveResource = () => {
         ElMessage.success(t('common.save_success'))
         let url = window.location.href
         url = url.replace(/\?opt=create/, `?resourceId=${dvInfo.value.id}`)
-        window.history.replaceState(null, '', url)
+        if (!embeddedStore.baseUrl) {
+          window.history.replaceState(
+            {
+              path: url
+            },
+            '',
+            url
+          )
+        }
 
         if (appData.value) {
           initCanvasData(dvInfo.value.id, 'dashboard', () => {
@@ -283,17 +296,28 @@ const backHandler = (url: string) => {
     return
   }
   wsCache.delete('DE-DV-CATCH-' + dvInfo.value.id)
-  window.open(url, '_self')
+  wsCache.set('db-info-id', dvInfo.value.id)
+  if (!!history.state.back) {
+    history.back()
+  } else {
+    window.open(url, '_self')
+  }
 }
 
 const multiplexingCanvasOpen = () => {
   multiplexingRef.value.dialogInit()
 }
-
-eventBus.on('preview', previewInner)
-eventBus.on('save', saveCanvasWithCheck)
-eventBus.on('clearCanvas', clearCanvas)
-
+onMounted(() => {
+  eventBus.on('preview', previewInner)
+  eventBus.on('save', saveCanvasWithCheck)
+  eventBus.on('clearCanvas', clearCanvas)
+})
+onBeforeUnmount(() => {
+  eventBus.off('preview', previewInner)
+  eventBus.off('save', saveCanvasWithCheck)
+  eventBus.off('clearCanvas', clearCanvas)
+  dvMainStore.setAppDataInfo(null)
+})
 const openDataBoardSetting = () => {
   dvMainStore.setCurComponent({ component: null, index: null })
 }
@@ -615,7 +639,7 @@ const initOpenHandler = newWindow => {
           </el-button>
           <template #dropdown>
             <el-dropdown-menu class="drop-style">
-              <el-dropdown-item @click="previewInner">
+              <el-dropdown-item @click="previewInner" v-if="!isIframe">
                 <el-icon style="margin-right: 8px; font-size: 16px">
                   <Icon name="icon_pc_fullscreen"><icon_pc_fullscreen class="svg-icon" /></Icon>
                 </el-icon>

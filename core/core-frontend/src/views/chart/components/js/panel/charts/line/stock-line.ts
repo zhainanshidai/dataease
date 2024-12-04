@@ -337,7 +337,10 @@ export class StockLine extends G2PlotChartView<MixOptions, Mix> {
       data,
       slider: {
         start: 0.5,
-        end: 1
+        end: 1,
+        textStyle: {
+          fontFamily: chart.fontFamily
+        }
       },
       plots: [
         {

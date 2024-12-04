@@ -2,7 +2,6 @@
   <el-dialog
     ref="enlargeDialog"
     :append-to-body="true"
-    :title="t('visualization.linkage_setting')"
     v-model="dialogShow"
     width="70vw"
     top="10vh"
@@ -12,10 +11,18 @@
       v-if="curComponent && curComponent.actionSelection"
       :action-selection="customLinkageActive"
     ></linkage-set-option>
-    <div v-loading="loading" @keydown.stop @keyup.stop v-if="state.initState" style="height: 550px">
+    <div
+      v-loading="loading"
+      @keydown.stop
+      @keyup.stop
+      v-if="state.initState"
+      style="height: 550px; margin-top: 22px"
+    >
       <el-row style="flex-direction: row">
         <div class="top-area">
-          <span class="top-area-text" style="margin-left: 0">已选图表：</span>
+          <span class="top-area-text" style="margin-left: 0"
+            >{{ t('visualization.selected_view') }}：</span
+          >
           <span class="top-area-value">
             <Icon class-name="view-type-icon"
               ><component
@@ -25,7 +32,7 @@
             ></Icon>
             {{ state.curLinkageViewInfo.title }}</span
           >
-          <span class="top-area-text">所用数据集：</span>
+          <span class="top-area-text">{{ t('visualization.used_dataset') }}：</span>
           <span class="top-area-value">
             <Icon class-name="view-type-icon" name="dataset-outline"
               ><datasetOutline style="vertical-align: -0.2em" class="svg-icon view-type-icon"
@@ -38,9 +45,10 @@
         <el-row class="preview">
           <el-col :span="8" style="height: 100%; overflow-y: auto">
             <el-row class="tree-head">
-              <span class="head-text">选择图表</span>
+              <span class="head-text">{{ t('visualization.to_select_view') }}</span>
               <span class="head-filter"
-                >仅看已选 <el-switch size="small" v-model="state.showSelected" />
+                >{{ t('visualization.show_selected_only') }}
+                <el-switch size="small" v-model="state.showSelected" />
               </span>
             </el-row>
             <el-row class="tree-dataset-head" v-show="sameDsShow"
@@ -48,13 +56,13 @@
                 ><el-icon class="toggle-icon" @click="() => (toggleSameDs = !toggleSameDs)">
                   <CaretBottom v-show="toggleSameDs" />
                   <CaretRight v-show="!toggleSameDs" /> </el-icon
-                ><span>同数据集</span></span
+                ><span>{{ t('visualization.same_dataset') }}</span></span
               >
               <el-checkbox
                 v-model="sameDatasetComponentCheckAll"
                 :indeterminate="checkAllIsIndeterminate"
                 @change="batchSelectChange"
-                >全选</el-checkbox
+                >{{ t('visualization.select_all') }}</el-checkbox
               ></el-row
             >
             <el-tree
@@ -62,7 +70,7 @@
               class="custom-tree"
               menu
               ref="linkageInfoTree"
-              :empty-text="'暂无可用图表'"
+              :empty-text="t('visualization.no_available_view')"
               :filter-node-method="filterNodeMethod"
               :data="curLinkageTargetViewsInfoSameDs"
               node-key="targetViewId"
@@ -103,7 +111,7 @@
                 ><el-icon class="toggle-icon" @click="() => (toggleDiffDs = !toggleDiffDs)">
                   <CaretBottom v-show="toggleDiffDs" />
                   <CaretRight v-show="!toggleDiffDs" /> </el-icon
-                ><span>不同数据集</span></span
+                ><span>{{ t('visualization.diff_dataset') }}</span></span
               >
             </el-row>
             <el-tree
@@ -111,7 +119,7 @@
               class="custom-tree"
               menu
               ref="linkageInfoTreeDiffDs"
-              :empty-text="'暂无可用图表'"
+              :empty-text="t('visualization.no_available_view')"
               :filter-node-method="filterNodeMethod"
               :data="curLinkageTargetViewsInfoDiffDs"
               node-key="targetViewId"
@@ -149,11 +157,11 @@
             </el-tree>
           </el-col>
           <el-col :span="16" class="preview-show">
-            <el-row class="content-head">配置图表间的字段关联关系</el-row>
+            <el-row class="content-head">{{ t('visualization.linkage_setting_tips1') }}</el-row>
             <el-row v-if="state.linkageInfo && state.linkageInfo.linkageActive">
               <el-row style="margin-top: 5px">
                 <div style="display: flex" class="inner-content">
-                  <div style="flex: 1">当前图表源字段</div>
+                  <div style="flex: 1">{{ t('visualization.current_chart_source_field') }}</div>
                   <div style="width: 36px"></div>
                   <div style="flex: 1">
                     {{ t('visualization.link_view_field') }}
@@ -170,7 +178,7 @@
                       <div class="select-filed">
                         <el-select
                           v-model="itemLinkage.sourceField"
-                          :placeholder="'请选择字段'"
+                          :placeholder="t('chart.pls_select_field')"
                           style="width: 100%"
                         >
                           <el-option
@@ -243,7 +251,7 @@
                 </div>
                 <el-row style="width: 100%; padding-left: 16px">
                   <el-button type="primary" icon="Plus" text @click="addLinkageField('', '')">
-                    追加联动依赖字段
+                    {{ t('visualization.add_linkage_dependency_fields') }}
                   </el-button>
                 </el-row>
               </el-row>
@@ -252,7 +260,9 @@
               <Icon name="dv-empty"
                 ><dvEmpty style="width: 125px; height: 125px" class="svg-icon"
               /></Icon>
-              <span style="margin-top: 8px; font-size: 14px">请先勾选需要联动的图表</span>
+              <span style="margin-top: 8px; font-size: 14px">
+                {{ t('visualization.select_linkage_tips') }}</span
+              >
             </el-row>
           </el-col>
         </el-row>

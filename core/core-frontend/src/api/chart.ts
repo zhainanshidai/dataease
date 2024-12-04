@@ -72,6 +72,16 @@ export const innerExportDetails = async (data): Promise<IResponse> => {
   })
 }
 
+export const innerExportDataSetDetails = async (data): Promise<IResponse> => {
+  return request.post({
+    url: '/chartData/innerExportDataSetDetails',
+    method: 'post',
+    data: data,
+    loading: true,
+    responseType: 'blob'
+  })
+}
+
 // 通过图表id获取数据
 export const getChart = async (id): Promise<IResponse> => {
   return request.post({ url: `/chart/getChart/${id}`, data: {} }).then(res => {

@@ -1,16 +1,14 @@
 <template>
   <div class="pic-main">
+    <chart-error v-if="isError" :err-msg="errMsg" />
     <img
       draggable="false"
-      v-if="state.showUrl"
+      v-else-if="state.showUrl"
       :style="imageAdapter"
       :src="imgUrlTrans(state.showUrl)"
     />
     <template v-else>
-      <chart-empty-info
-        :themes="canvasStyleData.dashboard.themeColor"
-        :view-icon="view.type"
-      ></chart-empty-info>
+      <chart-empty-info :view-icon="view.type"></chart-empty-info>
     </template>
   </div>
 </template>
@@ -35,6 +33,7 @@ import { parseJson } from '@/views/chart/components/js/util'
 import { mappingColor } from '@/views/chart/components/js/panel/common/common_table'
 import { storeToRefs } from 'pinia'
 import ChartEmptyInfo from '@/views/chart/components/views/components/ChartEmptyInfo.vue'
+import ChartError from '@/views/chart/components/views/components/ChartError.vue'
 const dvMainStore = dvMainStoreWithOut()
 const { canvasViewInfo, editMode, mobileInPc, canvasStyleData } = storeToRefs(dvMainStore)
 const state = reactive({
@@ -202,12 +201,17 @@ const calcData = (viewCalc: Chart, callback) => {
   }
   if (viewCalc.tableId || viewCalc['dataFrom'] === 'template') {
     const v = JSON.parse(JSON.stringify(viewCalc))
+    v.type = 'table-info'
+    v.render = 'antv'
+    v.resultCount = 1
     getData(v)
       .then(res => {
         if (res.code && res.code !== 0) {
           isError.value = true
           errMsg.value = res.msg
         } else {
+          res.type = 'picture-group'
+          res.render = 'custom'
           state.data = res?.data
           state.viewDataInfo = res
           state.totalItems = res?.totalItems

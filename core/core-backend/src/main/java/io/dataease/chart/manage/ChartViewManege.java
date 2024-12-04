@@ -30,6 +30,7 @@ import io.dataease.license.config.XpackInteract;
 import io.dataease.utils.BeanUtils;
 import io.dataease.utils.IDUtils;
 import io.dataease.utils.JsonUtil;
+import io.dataease.utils.LogUtil;
 import io.dataease.visualization.dao.auto.entity.DataVisualizationInfo;
 import io.dataease.visualization.dao.auto.mapper.DataVisualizationInfoMapper;
 import jakarta.annotation.Resource;
@@ -41,6 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
@@ -127,11 +129,53 @@ public class ChartViewManege {
         QueryWrapper<CoreChartView> wrapper = new QueryWrapper<>();
         wrapper.eq("scene_id", sceneId);
         List<ChartViewDTO> chartViewDTOS = transChart(coreChartViewMapper.selectList(wrapper));
-        for (ChartViewDTO dto : chartViewDTOS) {
-            QueryWrapper<CoreDatasetTableField> wp = new QueryWrapper<>();
-            wp.eq("dataset_group_id", dto.getTableId());
-            List<CoreDatasetTableField> coreDatasetTableFields = coreDatasetTableFieldMapper.selectList(wp);
-            dto.setCalParams(Utils.getParams(datasetTableFieldManage.transDTO(coreDatasetTableFields)));
+        if (!CollectionUtils.isEmpty(chartViewDTOS)) {
+            List<Long> tableIds = chartViewDTOS.stream()
+                    .map(ChartViewDTO::getTableId).distinct()
+                    .toList();
+            if (!CollectionUtils.isEmpty(tableIds)) {
+                QueryWrapper<CoreDatasetTableField> wp = new QueryWrapper<>();
+                wp.in("dataset_group_id", tableIds);
+                List<CoreDatasetTableField> coreDatasetTableFields = coreDatasetTableFieldMapper.selectList(wp);
+                Map<Long, List<CoreDatasetTableField>> groupedByTableId = coreDatasetTableFields.stream()
+                        .collect(Collectors.groupingBy(CoreDatasetTableField::getDatasetGroupId));
+                if(chartViewDTOS.size()<10){
+                    chartViewDTOS.forEach(dto -> {
+                        if (dto.getTableId() != null) {
+                            dto.setCalParams(Utils.getParams(datasetTableFieldManage.transDTO(groupedByTableId.get(dto.getTableId()))));
+                        }
+                    });
+                }else{
+                    ExecutorService executor = Executors.newFixedThreadPool(10);
+                    try {
+                        // 超过10个图表要处理启用多线程处理
+                        CountDownLatch latch = new CountDownLatch(chartViewDTOS.size());
+                        chartViewDTOS.forEach(dto -> {
+                            executor.submit(() -> {
+                                try {
+                                    if (dto.getTableId() != null) {
+                                        dto.setCalParams(Utils.getParams(datasetTableFieldManage.transDTO(groupedByTableId.get(dto.getTableId()))));
+                                    }
+                                } finally {
+                                    latch.countDown(); // 减少计数器
+                                }
+                            });
+                        });
+
+                        // 等待所有线程完成
+                        boolean completedInTime = latch.await(200, TimeUnit.SECONDS);
+                        if (!completedInTime) {
+                            throw new InterruptedException("Tasks did not complete within 200 seconds");
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        LogUtil.error(e);
+                    } finally {
+                        executor.shutdown(); // 确保线程池关闭
+                    }
+                }
+
+            }
         }
         return chartViewDTOS;
     }

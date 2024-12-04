@@ -21,9 +21,11 @@ import { ElMessage } from 'element-plus-secondary'
 import { useEmitt } from '@/hooks/web/useEmitt'
 
 import { useUserStoreWithOut } from '@/store/modules/user'
+import { useI18n } from '@/hooks/web/useI18n'
 const userStore = useUserStoreWithOut()
 
 const userName = computed(() => userStore.getName)
+const { t } = useI18n()
 
 const dvMainStore = dvMainStoreWithOut()
 const { dvInfo, canvasViewDataInfo } = storeToRefs(dvMainStore)
@@ -70,7 +72,7 @@ function createNew() {
   resourceTreeRef.value?.createNewObject()
 }
 
-const loadCanvasData = (dvId, weight?) => {
+const loadCanvasData = (dvId, weight?, ext?) => {
   const initMethod = props.showPosition === 'multiplexing' ? initCanvasDataPrepare : initCanvasData
   dataInitState.value = false
   initMethod(
@@ -84,6 +86,7 @@ const loadCanvasData = (dvId, weight?) => {
       curPreviewGap
     }) {
       dvInfo['weight'] = weight
+      dvInfo['ext'] = ext || 0
       state.canvasDataPreview = canvasDataResult
       state.canvasStylePreview = canvasStyleResult
       state.canvasViewInfoPreview = canvasViewInfoPreview
@@ -162,12 +165,16 @@ const slideOpenChange = () => {
 }
 
 const reload = id => {
-  loadCanvasData(id, state.dvInfo.weight)
+  loadCanvasData(id, state.dvInfo.weight, state.dvInfo.ext)
 }
 
 const resourceNodeClick = data => {
-  loadCanvasData(data.id, data.weight)
+  loadCanvasData(data.id, data.weight, data.ext)
 }
+
+const dataVKeepSize = computed(() => {
+  return state.canvasStylePreview?.screenAdaptor === 'keep'
+})
 
 const state = reactive({
   canvasDataPreview: null,
@@ -275,7 +282,12 @@ onBeforeMount(() => {
             :dv-info="state.dvInfo"
           ></multiplex-preview-show>
         </div>
-        <div v-if="showPosition === 'preview'" ref="previewCanvasContainer" class="content">
+        <div
+          v-if="showPosition === 'preview'"
+          :class="{ 'canvas_keep-size': dataVKeepSize }"
+          ref="previewCanvasContainer"
+          class="content"
+        >
           <dv-preview
             ref="dvPreviewRef"
             v-if="state.canvasStylePreview && dataInitState"
@@ -290,15 +302,15 @@ onBeforeMount(() => {
         </div>
       </template>
       <template v-else-if="hasTreeData && mounted">
-        <empty-background description="请在左侧选择数据大屏" img-type="select" />
+        <empty-background :description="t('visualization.select_screen_tips')" img-type="select" />
       </template>
       <template v-else-if="mounted">
-        <empty-background description="暂无数据大屏" img-type="none">
+        <empty-background :description="t('visualization.no_screen')" img-type="none">
           <el-button v-if="rootManage && !isDataEaseBi" @click="createNew" type="primary">
             <template #icon>
               <Icon name="icon_add_outlined"><icon_add_outlined class="svg-icon" /></Icon>
             </template>
-            {{ $t('commons.create') }}{{ $t('work_branch.big_data_screen') }}
+            {{ t('commons.create') }}{{ t('work_branch.big_data_screen') }}
           </el-button>
         </empty-background>
       </template>

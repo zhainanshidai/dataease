@@ -23,3 +23,31 @@ const isCustomGeo = (id: string) => {
 const getBusiGeoCode = (id: string) => {
   return id.substring(4)
 }
+
+export const listCustomGeoArea = (): Promise<IResponse<CustomGeoArea[]>> => {
+  return request.get({ url: '/customGeo/geoArea/list' })
+}
+
+export const getCustomGeoArea = (id: string): Promise<IResponse<CustomGeoSubArea[]>> => {
+  return request.get({ url: `/customGeo/geoArea/${id}` })
+}
+
+export const deleteCustomGeoArea = (id: string) => {
+  return request.delete({ url: `/customGeo/geoArea/${id}` })
+}
+
+export const saveCustomGeoArea = (area: CustomGeoArea) => {
+  return request.post({ url: '/customGeo/geoArea/save', data: area })
+}
+
+export const deleteCustomGeoSubArea = (id: string) => {
+  return request.delete({ url: `/customGeo/geoSubArea/${id}` })
+}
+
+export const saveCustomGeoSubArea = (area: CustomGeoSubArea) => {
+  return request.post({ url: '/customGeo/geoSubArea/save', data: area })
+}
+
+export const listSubAreaOptions = (): Promise<IResponse<AreaNode[]>> => {
+  return request.get({ url: '/customGeo/geoSubArea/options' })
+}

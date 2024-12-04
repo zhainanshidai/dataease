@@ -43,9 +43,12 @@
         <result column="publicJumpId" jdbcType="VARCHAR" property="publicJumpId"/>
         <collection property="targetViewInfoList"
                     ofType="io.dataease.api.visualization.vo.VisualizationLinkJumpTargetViewInfoVO">
+            <result column="target_id" jdbcType="BIGINT" property="targetId"/>
             <result column="target_view_id" jdbcType="BIGINT" property="targetViewId"/>
             <result column="target_field_id" jdbcType="BIGINT" property="targetFieldId"/>
             <result column="source_field_active_id" jdbcType="VARCHAR" property="sourceFieldActiveId"/>
+            <result column="target_type" jdbcType="VARCHAR" property="targetType"/>
+            <result column="outer_params_name" jdbcType="VARCHAR" property="outerParamsName"/>
         </collection>
     </resultMap>
     <resultMap id="ViewTableFieldDetailsMap" type="io.dataease.api.visualization.vo.VisualizationViewTableVO">
@@ -85,9 +88,12 @@
             xpack_share.uuid AS publicJumpId,
             ifnull( visualization_link_jump_info.checked, 0 ) AS checked,
             ifnull( visualization_link_jump_info.attach_params, 0 ) AS attach_params,
+            visualization_link_jump_target_view_info.target_id,
             visualization_link_jump_target_view_info.target_view_id,
             visualization_link_jump_target_view_info.target_field_id,
-            visualization_link_jump_target_view_info.source_field_active_id
+            visualization_link_jump_target_view_info.target_type,
+            visualization_link_jump_target_view_info.source_field_active_id,
+            visualization_outer_params_info.param_name as outer_params_name
         FROM
             core_chart_view
                 LEFT JOIN core_dataset_table_field ON core_chart_view.table_id = core_dataset_table_field.dataset_group_id
@@ -98,6 +104,7 @@
                 LEFT JOIN visualization_link_jump_target_view_info ON visualization_link_jump_info.id = visualization_link_jump_target_view_info.link_jump_info_id
                 LEFT JOIN xpack_share ON xpack_share.creator = #{uid}
                 AND visualization_link_jump_info.target_dv_id = xpack_share.resource_id
+                left join visualization_outer_params_info on visualization_outer_params_info.params_info_id = visualization_link_jump_target_view_info.target_view_id
         WHERE
             core_chart_view.id = #{source_view_id}
           AND core_chart_view.type != 'VQuery'
@@ -154,6 +161,19 @@
             AND visualization_link_jump.source_dv_id = #{dvId}
         WHERE core_chart_view.id = #{viewId}
     </select>
+
+        <select id="queryOutParamsTargetWithDvId" resultType="io.dataease.api.visualization.vo.VisualizationOutParamsJumpVO">
+            SELECT
+            	vopi.params_info_id as id,
+            	vopi.param_name as name,
+            	vopi.param_name as title,
+            	'outerParams' as type
+            FROM
+            	visualization_outer_params_info vopi
+            	LEFT JOIN visualization_outer_params vop ON vopi.params_id = vop.params_id
+            WHERE
+            	vop.visualization_id = #{dvId}
+        </select>
 
     <delete id="deleteJumpTargetViewInfo">
         DELETE
