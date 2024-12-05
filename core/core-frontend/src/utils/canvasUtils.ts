@@ -262,9 +262,6 @@ export function historyAdaptor(
   canvasDataResult.forEach(componentItem => {
     historyItemAdaptor(componentItem, reportFilterInfo, attachInfo, canvasVersion, canvasInfo)
   })
-  if (canvasInfo && canvasInfo.id) {
-    updateCheckVersion(canvasInfo.id)
-  }
 }
 
 // 重置仪表板、大屏中的其他组件
@@ -565,6 +562,7 @@ export async function canvasSave(callBack) {
     canvasViewInfo: canvasViewInfo.value,
     appData: appData.value,
     ...dvInfo.value,
+    checkVersion: wsCache.get('x-de-execute-version'),
     contentId: newContentId,
     watermarkInfo: null
   }
