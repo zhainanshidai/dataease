@@ -1,10 +1,12 @@
 package io.dataease.extensions.datasource.dto;
 
 import lombok.Data;
+import org.springframework.util.StringUtils;
 
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Data
@@ -29,10 +31,36 @@ public class DatasourceRequest implements Serializable {
     }
 
     public String getQuery() {
-        return this.query;
+        return this.rebuildSqlWithFragment(this.query);
     }
 
     public void setQuery(String query) {
         this.query = query;
+    }
+
+    private String rebuildSqlWithFragment(String sql) {
+        if (!sql.toLowerCase().startsWith("with")) {
+            Matcher matcher = this.WITH_SQL_FRAGMENT.matcher(sql);
+            if (matcher.find()) {
+                String withFragment = matcher.group();
+                if (!StringUtils.isEmpty(withFragment)) {
+                    if (withFragment.length() > 6) {
+                        int lastSelectIndex = withFragment.length() - 6;
+                        sql = sql.replace(withFragment, withFragment.substring(lastSelectIndex));
+                        withFragment = withFragment.substring(0, lastSelectIndex);
+                    }
+
+                    sql = withFragment + " " + sql;
+                    sql = sql.replaceAll(" {2,}", " ");
+                }
+            }
+        }
+
+        return sql;
+    }
+
+    public String getREG_WITH_SQL_FRAGMENT() {
+        this.getClass();
+        return "((?i)WITH[\\s\\S]+(?i)AS?\\s*\\([\\s\\S]+\\))\\s*(?i)SELECT";
     }
 }
